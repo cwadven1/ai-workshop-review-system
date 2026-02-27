@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}ReviewTime - 가게 목록{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="mb-3"><i class="bi bi-shop"></i> 가게 검색</h2>
+        <form method="get" action="{% url 'stores:list' %}" class="row g-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="q" placeholder="가게명 또는 주소 검색..." value="{{ current_query }}">
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="category">
+                    <option value="">전체 카테고리</option>
+                    {% for value, label in categories %}
+                    <option value="{{ value }}" {% if current_category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">검색</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    {% for item in store_data %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 store-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">
+                        <a href="{% url 'stores:detail' item.store.pk %}" class="text-decoration-none text-dark">
+                            {{ item.store.name }}
+                        </a>
+                    </h5>
+                    <span class="badge {% if item.trend == '↑' %}bg-success{% elif item.trend == '↓' %}bg-danger{% else %}bg-secondary{% endif %} fs-6">
+                        {{ item.trend }}
+                    </span>
+                </div>
+                <p class="card-text">
+                    <span class="badge bg-info text-dark">{{ item.store.get_category_display }}</span>
+                </p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-warning">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= item.store.avg_rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% elif forloop.counter <= item.store.avg_rating|add:"0.5" %}
+                                    <i class="bi bi-star-half"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                        <span class="ms-1 fw-bold">{{ item.store.avg_rating }}</span>
+                    </div>
+                    <small class="text-muted">리뷰 {{ item.store.total_review_count }}개</small>
+                </div>
+                <p class="card-text mt-2">
+                    <small class="text-muted"><i class="bi bi-geo-alt"></i> {{ item.store.address }}</small>
+                </p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'stores:detail' item.store.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                    월별 리뷰 트렌드 보기 <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 검색 결과가 없습니다.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

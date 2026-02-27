@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ store.name }} 리뷰 분석 - 요기요{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero 이미지 영역 ── -->
+<div class="store-hero">
+    <i class="bi bi-shop-window"></i>
+    <a href="javascript:history.back()" class="hero-back-btn" aria-label="뒤로가기">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+</div>
+
+<!-- ── 가게 정보 카드 ── -->
+<div class="store-detail-header">
+    <div class="store-detail-name">{{ store.name }}</div>
+    <div class="store-detail-category">{{ store.get_category_display }}</div>
+    <div class="store-detail-rating-row">
+        <span class="store-detail-rating-num">{{ store.avg_rating }}</span>
+        <span class="store-detail-stars">
+            {% for i in "12345" %}
+                {% if forloop.counter <= store.avg_rating %}
+                    <i class="bi bi-star-fill"></i>
+                {% elif forloop.counter <= store.avg_rating|add:"0.5" %}
+                    <i class="bi bi-star-half"></i>
+                {% else %}
+                    <i class="bi bi-star"></i>
+                {% endif %}
+            {% endfor %}
+        </span>
+        <span class="store-detail-review-count">리뷰 {{ store.total_review_count }}건</span>
+    </div>
+    <a href="{% url 'store-timeline' store.pk %}" class="btn-yg-review">
+        <i class="bi bi-chat-left-text me-1"></i>리뷰 보기
+    </a>
+</div>
+
+<!-- ── 월별 평점 트렌드 차트 ── -->
+<div class="detail-section">
+    <div class="detail-section-title"><i class="bi bi-graph-up me-1"></i>월별 평점 트렌드</div>
+    <div class="d-flex flex-wrap gap-1 mb-3">
+        <small class="text-muted d-flex align-items-center gap-1">
+            <span style="display:inline-block;width:10px;height:10px;background:#F44336;border-radius:2px;"></span>~2점
+            <span style="display:inline-block;width:10px;height:10px;background:#FF9800;border-radius:2px;margin-left:4px;"></span>~3점
+            <span style="display:inline-block;width:10px;height:10px;background:#FFC107;border-radius:2px;margin-left:4px;"></span>~3.5점
+            <span style="display:inline-block;width:10px;height:10px;background:#8BC34A;border-radius:2px;margin-left:4px;"></span>~4점
+            <span style="display:inline-block;width:10px;height:10px;background:#1B9E3E;border-radius:2px;margin-left:4px;"></span>4.5점+
+            <span style="display:inline-block;width:16px;height:2px;background:#6c757d;border-radius:1px;margin-left:8px;vertical-align:middle;"></span>
+            <span style="display:inline-block;width:6px;height:6px;background:#6c757d;border-radius:50%;margin-left:-2px;vertical-align:middle;"></span> 리뷰수
+        </small>
+    </div>
+    <div style="height: 280px; position: relative;">
+        <canvas id="ratingTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- ── 메뉴 섹션 ── -->
+{% if menus %}
+<div class="detail-section">
+    <div class="detail-section-title"><i class="bi bi-menu-button-wide me-1"></i>메뉴</div>
+    {% for menu in menus %}
+    <div class="menu-item">
+        <div class="menu-thumb"><i class="bi bi-image"></i></div>
+        <div class="menu-info">
+            <div class="menu-name">{{ menu.name }}</div>
+            {% if menu.is_popular %}<span class="menu-popular-badge">인기</span>{% endif %}
+            <div class="menu-price">{{ menu.price|floatformat:0 }}원</div>
+            {% if menu.description %}<div class="menu-desc">{{ menu.description }}</div>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 트렌드 차트 초기화
+    fetch("{% url 'trends-data' store.pk %}")
+        .then(function (response) { return response.json(); })
+        .then(function (data) { initTrendChart('ratingTrendChart', data); });
+
+    // 최근 본 가게 localStorage 저장
+    (function () {
+        const KEY = 'reviewtime_recent_stores';
+        const storeId = {{ store.pk }};
+        let ids;
+        try { ids = JSON.parse(localStorage.getItem(KEY) || '[]'); }
+        catch (e) { ids = []; }
+        ids = ids.filter(function (id) { return id !== storeId; });
+        ids.unshift(storeId);
+        localStorage.setItem(KEY, JSON.stringify(ids.slice(0, 5)));
+    })();
+});
+</script>
+{% endblock %}

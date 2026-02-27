@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ store.name }} - {{ year_month }} 리뷰{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'stores:list' %}">홈</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'stores:detail' store.pk %}">{{ store.name }}</a></li>
+        <li class="breadcrumb-item active">{{ year_month|default:"전체" }} 리뷰</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>
+        {{ store.name }}
+        {% if year_month %}
+        <small class="text-muted">- {{ year_month }}</small>
+        {% endif %}
+    </h3>
+    <a href="{% url 'stores:detail' store.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> 돌아가기
+    </a>
+</div>
+
+{% if summary %}
+<div class="card border-primary mb-4 shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <i class="bi bi-robot"></i> {{ year_month }} AI 요약
+    </div>
+    <div class="card-body">
+        <p>{{ summary.summary }}</p>
+        <div class="row">
+            <div class="col-md-6">
+                <strong class="text-success"><i class="bi bi-hand-thumbs-up"></i> 좋은 점</strong>
+                <ul class="mt-1">
+                    {% for point in summary.highlights.good_points %}
+                    <li>{{ point }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <strong class="text-danger"><i class="bi bi-hand-thumbs-down"></i> 아쉬운 점</strong>
+                <ul class="mt-1">
+                    {% for point in summary.highlights.bad_points %}
+                    <li>{{ point }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    {% for review in reviews %}
+    <div class="col-12 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="text-warning">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                        <span class="ms-1 fw-bold">{{ review.rating }}점</span>
+                    </div>
+                    <div>
+                        <span class="badge {% if review.sentiment == 'positive' %}bg-success{% elif review.sentiment == 'negative' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                            {{ review.get_sentiment_display }}
+                        </span>
+                        <small class="text-muted ms-2">{{ review.review_date }}</small>
+                    </div>
+                </div>
+                <p class="card-text">{{ review.content }}</p>
+                {% if review.keywords %}
+                <div>
+                    {% for kw in review.keywords %}
+                    <span class="badge bg-light text-dark border me-1">{{ kw }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 해당 기간의 리뷰가 없습니다.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

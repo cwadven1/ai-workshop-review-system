@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}{{ store.name }} - ReviewTime{% endblock %}
+
+{% block content %}
+<!-- 가게 기본 정보 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'stores:list' %}">홈</a></li>
+                <li class="breadcrumb-item active">{{ store.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2 class="mb-1">{{ store.name }}</h2>
+                        <span class="badge bg-info text-dark mb-2">{{ store.get_category_display }}</span>
+                        <p class="text-muted mb-1"><i class="bi bi-geo-alt"></i> {{ store.address }}</p>
+                        {% if store.phone %}
+                        <p class="text-muted mb-0"><i class="bi bi-telephone"></i> {{ store.phone }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <div class="display-6 fw-bold text-primary">{{ store.avg_rating }}</div>
+                        <div class="text-warning">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= store.avg_rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% elif forloop.counter <= store.avg_rating|add:"0.5" %}
+                                    <i class="bi bi-star-half"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <small class="text-muted">리뷰 {{ store.total_review_count }}개</small>
+                    </div>
+                </div>
+
+                {% if menus %}
+                <hr>
+                <h6><i class="bi bi-list-ul"></i> 메뉴</h6>
+                <div class="row">
+                    {% for menu in menus %}
+                    <div class="col-md-3 col-6 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ menu.name }}</span>
+                            <span class="text-muted">{{ menu.price|floatformat:0 }}원</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 월별 평점 트렌드 차트 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> 월별 평점 트렌드</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="ratingTrendChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 월별 리뷰 타임라인 -->
+<div class="row">
+    <div class="col-12">
+        <h4 class="mb-3"><i class="bi bi-calendar3"></i> 월별 리뷰 타임라인</h4>
+
+        <div class="accordion" id="monthlyAccordion">
+            {% for summary in monthly_summaries %}
+            <div class="accordion-item mb-2 shadow-sm">
+                <h2 class="accordion-header">
+                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#month-{{ summary.year_month|slugify }}">
+                        <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                            <div>
+                                <strong>{{ summary.year_month }}</strong>
+                                <span class="badge bg-primary ms-2">{{ summary.review_count }}개 리뷰</span>
+                            </div>
+                            <div>
+                                <span class="text-warning me-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= summary.avg_rating %}
+                                            <i class="bi bi-star-fill"></i>
+                                        {% else %}
+                                            <i class="bi bi-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </span>
+                                <strong>{{ summary.avg_rating }}</strong>
+                                {% if summary.rating_change > 0 %}
+                                    <span class="badge bg-success ms-1">+{{ summary.rating_change }}</span>
+                                {% elif summary.rating_change < 0 %}
+                                    <span class="badge bg-danger ms-1">{{ summary.rating_change }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary ms-1">0</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+                <div id="month-{{ summary.year_month|slugify }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                     data-bs-parent="#monthlyAccordion">
+                    <div class="accordion-body">
+                        <!-- AI 요약 카드 -->
+                        <div class="card border-primary mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <i class="bi bi-robot"></i> AI 요약
+                            </div>
+                            <div class="card-body">
+                                <p>{{ summary.summary }}</p>
+
+                                <div class="row">
+                                    <!-- 감정 분석 비율 -->
+                                    <div class="col-md-4 mb-3">
+                                        <h6>감정 분석</h6>
+                                        {% with dist=summary.sentiment_distribution total=summary.sentiment_total %}
+                                        <div class="mb-1">
+                                            <small>긍정</small>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-success" style="width: {% widthratio dist.positive total 100 %}%">
+                                                    {{ dist.positive }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-1">
+                                            <small>중립</small>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-warning" style="width: {% widthratio dist.neutral total 100 %}%">
+                                                    {{ dist.neutral }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-1">
+                                            <small>부정</small>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-danger" style="width: {% widthratio dist.negative total 100 %}%">
+                                                    {{ dist.negative }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endwith %}
+                                    </div>
+
+                                    <!-- 좋은 점 -->
+                                    <div class="col-md-4 mb-3">
+                                        <h6><i class="bi bi-hand-thumbs-up text-success"></i> 좋은 점</h6>
+                                        <ul class="list-unstyled">
+                                            {% for point in summary.highlights.good_points %}
+                                            <li class="mb-1"><small class="text-success"><i class="bi bi-check-circle"></i></small> {{ point }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+
+                                    <!-- 아쉬운 점 -->
+                                    <div class="col-md-4 mb-3">
+                                        <h6><i class="bi bi-hand-thumbs-down text-danger"></i> 아쉬운 점</h6>
+                                        <ul class="list-unstyled">
+                                            {% for point in summary.highlights.bad_points %}
+                                            <li class="mb-1"><small class="text-danger"><i class="bi bi-x-circle"></i></small> {{ point }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- 주요 키워드 -->
+                                {% if summary.top_keywords %}
+                                <div class="mt-2">
+                                    <h6><i class="bi bi-tags"></i> 주요 키워드</h6>
+                                    {% for kw in summary.top_keywords %}
+                                    <span class="badge bg-light text-dark border me-1">{{ kw.keyword }} ({{ kw.count }})</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 리뷰 목록 링크 -->
+                        <div class="text-center">
+                            <a href="{% url 'reviews:list' store.pk %}?year_month={{ summary.year_month }}"
+                               class="btn btn-outline-primary">
+                                {{ summary.year_month }} 리뷰 전체 보기 ({{ summary.review_count }}개) <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 아직 월별 요약 데이터가 없습니다.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    fetch("{% url 'reviews:trends_data' store.pk %}")
+        .then(response => response.json())
+        .then(data => {
+            initTrendChart('ratingTrendChart', data);
+        });
+});
+</script>
+{% endblock %}
