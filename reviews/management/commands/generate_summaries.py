@@ -4,22 +4,22 @@ from collections import defaultdict
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from reviews.models import MonthlySummary, Review
+from reviews.models import Review, WeeklySummary
 from stores.models import Store
 
 
 class Command(BaseCommand):
-    help = "특정 가게의 특정 월 리뷰를 AI로 요약 생성"
+    help = "특정 가게의 특정 주차 리뷰를 AI로 요약 생성"
 
     def add_arguments(self, parser):
         parser.add_argument("--store_id", type=int, required=True, help="가게 ID")
         parser.add_argument(
-            "--year_month", type=str, required=True, help="연월 (예: 2025-02)"
+            "--year_week", type=str, required=True, help="연주차 (예: 2025-W14)"
         )
 
     def handle(self, *args, **options):
         store_id = options["store_id"]
-        year_month = options["year_month"]
+        year_week = options["year_week"]
 
         try:
             store = Store.objects.get(pk=store_id)
@@ -27,15 +27,15 @@ class Command(BaseCommand):
             self.stderr.write(f"가게 ID {store_id}을(를) 찾을 수 없습니다.")
             return
 
-        reviews = Review.objects.filter(store=store, year_month=year_month)
+        reviews = Review.objects.filter(store=store, year_week=year_week)
         if not reviews.exists():
             self.stderr.write(
-                f"{store.name}의 {year_month} 리뷰가 없습니다."
+                f"{store.name}의 {year_week} 리뷰가 없습니다."
             )
             return
 
         self.stdout.write(
-            f"{store.name}의 {year_month} 리뷰 {reviews.count()}개 요약 생성 중..."
+            f"{store.name}의 {year_week} 리뷰 {reviews.count()}개 요약 생성 중..."
         )
 
         # 리뷰 통계 계산
@@ -55,10 +55,10 @@ class Command(BaseCommand):
         top_keywords = sorted(keyword_counts.items(), key=lambda x: -x[1])[:5]
         top_keywords = [{"keyword": kw, "count": cnt} for kw, cnt in top_keywords]
 
-        # 전월 평점과 비교
+        # 전주 평점과 비교
         prev_summary = (
-            MonthlySummary.objects.filter(store=store, year_month__lt=year_month)
-            .order_by("-year_month")
+            WeeklySummary.objects.filter(store=store, year_week__lt=year_week)
+            .order_by("-year_week")
             .first()
         )
         rating_change = 0.0
@@ -71,7 +71,7 @@ class Command(BaseCommand):
         api_key = settings.OPENAI_API_KEY
         if api_key:
             summary_text, highlights = self._generate_with_openai(
-                api_key, store.name, year_month, review_texts, avg_rating, sentiments
+                api_key, store.name, year_week, review_texts, avg_rating, sentiments
             )
         else:
             self.stdout.write(
@@ -80,13 +80,13 @@ class Command(BaseCommand):
                 )
             )
             summary_text, highlights = self._generate_dummy(
-                store.name, year_month, avg_rating, sentiments, top_keywords, rating_change
+                store.name, year_week, avg_rating, sentiments, top_keywords, rating_change
             )
 
-        # MonthlySummary 저장 (upsert)
-        summary, created = MonthlySummary.objects.update_or_create(
+        # WeeklySummary 저장 (upsert)
+        summary, created = WeeklySummary.objects.update_or_create(
             store=store,
-            year_month=year_month,
+            year_week=year_week,
             defaults={
                 "summary": summary_text,
                 "highlights": highlights,
@@ -100,11 +100,11 @@ class Command(BaseCommand):
 
         action = "생성" if created else "업데이트"
         self.stdout.write(
-            self.style.SUCCESS(f"월별 요약이 {action}되었습니다: {summary}")
+            self.style.SUCCESS(f"주별 요약이 {action}되었습니다: {summary}")
         )
 
     def _generate_with_openai(
-        self, api_key, store_name, year_month, review_texts, avg_rating, sentiments
+        self, api_key, store_name, year_week, review_texts, avg_rating, sentiments
     ):
         """OpenAI GPT-4o-mini로 요약 생성"""
         try:
@@ -117,7 +117,7 @@ class Command(BaseCommand):
             pos_pct = round(sentiments.get("positive", 0) / total * 100)
             neg_pct = round(sentiments.get("negative", 0) / total * 100)
 
-            prompt = f"""다음은 '{store_name}'의 {year_month} 리뷰들입니다.
+            prompt = f"""다음은 '{store_name}'의 {year_week} 리뷰들입니다.
 
 리뷰 목록:
 {reviews_block}
@@ -157,7 +157,7 @@ class Command(BaseCommand):
             self.stdout.write("더미 요약으로 대체합니다.")
             return self._generate_dummy(
                 store_name,
-                year_month,
+                year_week,
                 avg_rating,
                 sentiments,
                 [],
@@ -165,7 +165,7 @@ class Command(BaseCommand):
             )
 
     def _generate_dummy(
-        self, store_name, year_month, avg_rating, sentiments, top_keywords, rating_change
+        self, store_name, year_week, avg_rating, sentiments, top_keywords, rating_change
     ):
         """더미 요약 생성 (OpenAI 없을 때)"""
         pos = sentiments.get("positive", 0)
@@ -174,7 +174,7 @@ class Command(BaseCommand):
         kw_text = ", ".join(kw["keyword"] for kw in top_keywords[:3]) if top_keywords else "맛, 서비스, 배달"
 
         summary = (
-            f"{store_name}의 {year_month} 리뷰 분석 결과, "
+            f"{store_name}의 {year_week} 리뷰 분석 결과, "
             f"평균 평점 {avg_rating}점으로 "
             f"긍정 리뷰가 {round(pos/total*100)}%, "
             f"부정 리뷰가 {round(neg/total*100)}%를 차지합니다. "

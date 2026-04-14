@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#F9F3EC"/>
+  <defs>
+    <radialGradient id="pastaPlate" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E8E0D8"/>
+    </radialGradient>
+    <radialGradient id="sauceGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFCC80"/>
+      <stop offset="100%" stop-color="#FF8F00"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 접시 그림자 -->
+  <ellipse cx="202" cy="252" rx="128" ry="16" fill="#00000018"/>
+  <!-- 접시 테두리 -->
+  <ellipse cx="200" cy="235" rx="128" ry="16" fill="#D4CCBA"/>
+  <!-- 접시 -->
+  <ellipse cx="200" cy="220" rx="128" ry="16" fill="#EDE8E0"/>
+  <rect x="72" y="130" width="256" height="90" rx="12" fill="url(#pastaPlate)"/>
+  <ellipse cx="200" cy="130" rx="128" ry="16" fill="#FAFAFA"/>
+
+  <!-- 크림 소스 베이스 -->
+  <ellipse cx="200" cy="165" rx="100" ry="55" fill="url(#sauceGrad)" opacity="0.6"/>
+
+  <!-- 파스타 면 (꼬불꼬불) -->
+  <path d="M130 150 Q150 135 170 150 Q190 165 210 150 Q230 135 250 150 Q270 165 280 155" fill="none" stroke="#F5DEB3" stroke-width="4" stroke-linecap="round"/>
+  <path d="M125 160 Q145 145 165 160 Q185 175 205 160 Q225 145 245 160 Q265 175 278 165" fill="none" stroke="#DEB887" stroke-width="4" stroke-linecap="round"/>
+  <path d="M128 170 Q148 155 168 170 Q188 185 208 170 Q228 155 248 170 Q268 185 275 175" fill="none" stroke="#F5DEB3" stroke-width="4" stroke-linecap="round"/>
+  <path d="M132 180 Q152 165 172 180 Q192 195 212 180 Q232 165 252 180 Q265 190 270 185" fill="none" stroke="#DEB887" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M138 190 Q158 175 178 190 Q198 205 218 190 Q238 175 255 188" fill="none" stroke="#F5DEB3" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- 크림 소스 -->
+  <path d="M155 155 Q175 148 195 155 Q210 160 220 155 Q210 172 195 175 Q175 178 160 170Z" fill="#FFFDE7" opacity="0.75"/>
+
+  <!-- 베이컨 조각들 -->
+  <path d="M158 162 Q168 158 175 164 Q168 172 158 170Z" fill="#B71C1C" opacity="0.85"/>
+  <path d="M210 158 Q220 154 228 160 Q220 168 210 166Z" fill="#B71C1C" opacity="0.85"/>
+  <path d="M185 175 Q194 171 201 177 Q194 184 185 183Z" fill="#C62828" opacity="0.85"/>
+
+  <!-- 파슬리 -->
+  <circle cx="195" cy="148" r="5" fill="#388E3C"/>
+  <circle cx="205" cy="146" r="4" fill="#43A047"/>
+  <circle cx="200" cy="145" r="3" fill="#66BB6A"/>
+
+  <!-- 파마산 치즈 (흰 점들) -->
+  <circle cx="167" cy="185" r="3" fill="white" opacity="0.8"/>
+  <circle cx="220" cy="183" r="2.5" fill="white" opacity="0.8"/>
+  <circle cx="245" cy="170" r="2" fill="white" opacity="0.7"/>
+  <circle cx="155" cy="172" r="2.5" fill="white" opacity="0.8"/>
+
+  <!-- 포크 -->
+  <rect x="345" y="90" width="6" height="160" rx="3" fill="#C0C0C0"/>
+  <rect x="338" y="90" width="3" height="40" rx="1.5" fill="#C0C0C0"/>
+  <rect x="343" y="90" width="3" height="40" rx="1.5" fill="#C0C0C0"/>
+  <rect x="348" y="90" width="3" height="40" rx="1.5" fill="#C0C0C0"/>
+  <rect x="353" y="90" width="3" height="40" rx="1.5" fill="#C0C0C0"/>
+
+  <!-- 나이프 -->
+  <rect x="44" y="90" width="6" height="160" rx="3" fill="#B0B0B0"/>
+  <path d="M44 90 L50 90 L50 130 Q44 130 44 90Z" fill="#A0A0A0"/>
+
+  <!-- 라벨 -->
+  <rect x="10" y="10" width="100" height="28" rx="14" fill="#E65100"/>
+  <text x="60" y="29" font-family="sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">까르보나라</text>
+</svg>

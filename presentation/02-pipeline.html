@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewTime - AI 분석 파이프라인</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header p { font-size: 1rem; color: #888; }
+
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .node {
+    width: 100%;
+    max-width: 640px;
+    border-radius: 16px;
+    padding: 20px 26px;
+    text-align: center;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .node:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
+  .node-input { border-left: 5px solid #FA0050; }
+  .node-local { border-left: 5px solid #00B894; }
+  .node-llm   { border-left: 5px solid #FF9100; }
+  .node-merge { border-left: 5px solid #6C5CE7; }
+  .node-output{ border-left: 5px solid #FA0050; }
+
+  .phase-tag { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tag-input  { background: #FFF0F3; color: #FA0050; }
+  .tag-local  { background: #E8FFF5; color: #00B894; }
+  .tag-llm    { background: #FFF3E0; color: #FF9100; }
+  .tag-merge  { background: #F0EDFF; color: #6C5CE7; }
+  .tag-output { background: #FFF0F3; color: #FA0050; }
+
+  .cost-badge { display: inline-block; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; margin-left: 6px; font-weight: 600; }
+  .cost-free { background: #E8FFF5; color: #00B894; }
+  .cost-min  { background: #FFF3E0; color: #FF9100; }
+  .cost-zero { background: #f0f0f0; color: #888; }
+
+  .node h3 { font-size: 1.05rem; color: #222; margin-bottom: 4px; }
+  .node p { font-size: 0.82rem; color: #777; line-height: 1.5; }
+  .node em { font-style: normal; font-weight: 600; }
+
+  .arrow { display: flex; flex-direction: column; align-items: center; height: 36px; justify-content: center; position: relative; }
+  .arrow-line { width: 2px; height: 20px; background: #ddd; border-radius: 1px; }
+  .arrow-head { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 8px solid #ddd; }
+  .arrow-label { position: absolute; right: -160px; top: 50%; transform: translateY(-50%); font-size: 0.7rem; color: #999; background: #fff; padding: 2px 10px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); white-space: nowrap; }
+
+  /* Sentiment table */
+  .section-title { text-align: center; font-size: 1.3rem; font-weight: 700; color: #222; margin: 40px 0 20px; }
+  .table-wrap { max-width: 720px; margin: 0 auto 40px; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f8f8; font-size: 0.78rem; color: #888; font-weight: 600; padding: 10px 14px; text-align: left; }
+  td { font-size: 0.83rem; color: #555; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; line-height: 1.5; }
+  td:nth-child(3) { text-align: center; min-width: 40px; }
+  tr:last-child td { border-bottom: none; }
+  .method-local { display: inline-block; background: #E8FFF5; color: #00B894; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .method-llm   { display: inline-block; background: #FFF3E0; color: #FF9100; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .result-pos { color: #00B894; font-weight: 700; }
+  .result-neg { color: #FA0050; font-weight: 700; }
+  .result-neu { color: #888; font-weight: 700; }
+
+  .legend { display: flex; justify-content: center; gap: 24px; margin-top: 36px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #888; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+  .nav a:hover { background: #e0004a; }
+  .nav a.back { background: #ddd; color: #555; }
+  .nav a.back:hover { background: #ccc; }
+  .page-indicator { text-align: center; margin-top: 16px; font-size: 0.8rem; color: #bbb; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">REVIEWTIME</div>
+    <h1>AI 분석 파이프라인</h1>
+    <p>7단계 하이브리드 파이프라인 — 로컬 처리 + 최소 LLM 호출</p>
+  </div>
+
+  <div class="pipeline">
+    <div class="node node-input">
+      <span class="phase-tag tag-input">INPUT</span>
+      <h3>리뷰 원문 (JSON)</h3>
+      <p>가게/음식/배달 리뷰 데이터 수집</p>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <div class="node node-local">
+      <span class="phase-tag tag-local">Phase 0 · 로컬</span>
+      <span class="cost-badge cost-free">비용 $0</span>
+      <h3>기간 분류</h3>
+      <p>월별 / 주별 버킷에 리뷰 분배 · ISO 8601 기준 주차 계산</p>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <div class="node node-local">
+      <span class="phase-tag tag-local">Phase 1 · 로컬</span>
+      <span class="cost-badge cost-free">비용 $0</span>
+      <h3>키워드 룰 기반 감성 분석</h3>
+      <p>긍정/부정 단어 사전 매칭 · 점수 합산으로 감성 태깅 · 키워드 빈도 집계<br>
+        <em style="color:#00B894;">로컬 실행, API 비용 없음</em></p>
+    </div>
+    <div class="arrow">
+      <div class="arrow-line"></div><div class="arrow-head"></div>
+      <span class="arrow-label">~75-85% 확정 처리</span>
+    </div>
+
+    <div class="node node-local">
+      <span class="phase-tag tag-local">Phase 2 · 로컬 필터</span>
+      <span class="cost-badge cost-free">비용 $0</span>
+      <h3>애매한 케이스 필터링</h3>
+      <p>이중부정 · 혼합감성 · 미등록어 · 평점-감성 불일치<br>
+        <em style="color:#FF9100;">전체의 15~25%만 LLM으로 전달</em></p>
+    </div>
+    <div class="arrow">
+      <div class="arrow-line"></div><div class="arrow-head"></div>
+      <span class="arrow-label">15~25%만 전달</span>
+    </div>
+
+    <div class="node node-llm">
+      <span class="phase-tag tag-llm">Phase 3 · LLM</span>
+      <span class="cost-badge cost-min">최소 토큰 ~200</span>
+      <h3>LLM 호출 (최소 토큰)</h3>
+      <p>(a) 애매한 리뷰 감성 판단<br>
+         (b) 키워드 통계 → 자연어 리포트 생성<br>
+        <em style="color:#FF9100;">하이브리드 전략으로 토큰 25배 절약</em></p>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <div class="node node-merge">
+      <span class="phase-tag tag-merge">Phase 4 · 병합</span>
+      <span class="cost-badge cost-zero">비용 $0</span>
+      <h3>결과 병합</h3>
+      <p>로컬 분석 결과 + LLM 판정 결과 통합</p>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <div class="node node-local">
+      <span class="phase-tag tag-local">Phase 5 · 로컬</span>
+      <span class="cost-badge cost-free">비용 $0</span>
+      <h3>별점 트렌드 계산</h3>
+      <p>시가/종가/고가/저가/거래량 · 이동평균 · 카테고리별 별점 산출</p>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <div class="node node-local">
+      <span class="phase-tag tag-local">Phase 6 · 로컬</span>
+      <span class="cost-badge cost-free">비용 $0</span>
+      <h3>비교 분석</h3>
+      <p>전월/전주 대비 변화 · 급변 감지 알림</p>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+    <div class="node node-output">
+      <span class="phase-tag tag-output">OUTPUT</span>
+      <h3>출력 (JSON + 차트 데이터)</h3>
+      <p>분석 결과 JSON · 별점 트렌드 차트 · 카테고리 리포트</p>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#00B894;"></div> 로컬 처리 (비용 $0)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FF9100;"></div> LLM 호출 (최소 비용)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FA0050;"></div> 입력/출력</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6C5CE7;"></div> 결과 병합</div>
+  </div>
+
+  <h2 class="section-title" style="margin-top:50px;">감성 분류 예시</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>리뷰 내용</th><th>매칭 키워드</th><th>점수</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>"신선한 네타에 셰프의 정성이 느껴집니다."</td>
+          <td><span class="method-local">신선(+1) · 정성(+1)</span></td>
+          <td style="font-weight:700;color:#00B894;">+2</td>
+          <td class="result-pos">긍정</td>
+        </tr>
+        <tr>
+          <td>"등심 돈까스가 두툼하고 바삭해요! 소스도 일품"</td>
+          <td><span class="method-local">바삭(+1) · 일품(+1)</span></td>
+          <td style="font-weight:700;color:#00B894;">+2</td>
+          <td class="result-pos">긍정</td>
+        </tr>
+        <tr>
+          <td>"고기가 질기고 튀김옷이 눅눅했어요"</td>
+          <td><span class="method-local">질긴(-1) · 눅눅(-1)</span></td>
+          <td style="font-weight:700;color:#FA0050;">-2</td>
+          <td class="result-neg">부정</td>
+        </tr>
+        <tr>
+          <td>"SNS 보고 기대했는데 그냥 평범한 떡볶이에요"</td>
+          <td><span class="method-local">기대했는데(-1) · 그냥 평범(-1)</span></td>
+          <td style="font-weight:700;color:#FA0050;">-2</td>
+          <td class="result-neg">부정</td>
+        </tr>
+        <tr>
+          <td>"보통이에요. 나쁘지 않지만 특별하지도 않은."</td>
+          <td><span class="method-local">매칭 없음</span></td>
+          <td style="font-weight:700;color:#888;">0</td>
+          <td class="result-neu">중립</td>
+        </tr>
+        <tr>
+          <td>"가격 대비 괜찮은 편이에요."</td>
+          <td><span class="method-local">매칭 없음</span></td>
+          <td style="font-weight:700;color:#888;">0</td>
+          <td class="result-neu">중립</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nav">
+    <a href="01-overview.html" class="back">&larr; 이전</a>
+    <a href="03-token-strategy.html">다음: 토큰 절약 전략 &rarr;</a>
+  </div>
+  <div class="page-indicator">2 / 6</div>
+</body>
+</html>

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewTime - 이해관계자 가치</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 50px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header p { font-size: 1rem; color: #888; }
+
+  /* Stakeholder cards */
+  .stakeholders {
+    display: flex;
+    gap: 30px;
+    max-width: 1020px;
+    margin: 0 auto 50px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .stakeholder-card {
+    flex: 1;
+    min-width: 320px;
+    max-width: 480px;
+    border-radius: 20px;
+    padding: 32px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .card-owner { border-top: 4px solid #6C5CE7; }
+  .card-user  { border-top: 4px solid #FA0050; }
+
+  .persona { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .persona-icon { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+  .card-owner .persona-icon { background: #F8F6FF; border: 2px solid #6C5CE7; }
+  .card-user .persona-icon  { background: #FFF5F7; border: 2px solid #FA0050; }
+  .persona-text h2 { font-size: 1.2rem; }
+  .card-owner .persona-text h2 { color: #6C5CE7; }
+  .card-user .persona-text h2  { color: #FA0050; }
+  .persona-text p { font-size: 0.82rem; color: #999; }
+
+  .value-desc { font-size: 0.9rem; color: #666; margin-bottom: 20px; line-height: 1.6; padding: 14px 18px; border-radius: 14px; background: #fafafa; }
+
+  .flow-steps { display: flex; flex-direction: column; gap: 0; }
+  .flow-step { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 12px; font-size: 0.88rem; }
+  .card-owner .flow-step { background: #FDFCFF; }
+  .card-user .flow-step  { background: #FFFBFC; }
+  .step-num { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .card-owner .step-num { background: #F0EDFF; color: #6C5CE7; border: 2px solid #6C5CE7; }
+  .card-user .step-num  { background: #FFF0F3; color: #FA0050; border: 2px solid #FA0050; }
+  .step-title { font-weight: 700; color: #333; margin-bottom: 2px; }
+  .step-desc  { font-size: 0.78rem; color: #999; }
+  .flow-connector { display: flex; align-items: center; justify-content: center; padding: 3px 0 3px 20px; }
+  .flow-connector-line { width: 2px; height: 16px; background: #e0e0e0; border-radius: 1px; }
+
+  /* Feature tables */
+  .feat-section { max-width: 1020px; margin: 0 auto 50px; }
+  .feat-section h2 { font-size: 1.1rem; font-weight: 700; color: #222; margin-bottom: 16px; text-align: center; }
+  .feat-tables { display: flex; gap: 24px; flex-wrap: wrap; }
+  .feat-table-wrap { flex: 1; min-width: 280px; background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .feat-table-wrap h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; }
+  .owner-h { color: #6C5CE7; }
+  .user-h  { color: #FA0050; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f8f8; font-size: 0.75rem; color: #888; font-weight: 600; padding: 8px 12px; text-align: left; }
+  td { font-size: 0.83rem; color: #555; padding: 9px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; line-height: 1.4; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Comparison table */
+  .compare-section { max-width: 900px; margin: 0 auto 50px; }
+  .compare-section h2 { font-size: 1.2rem; font-weight: 700; color: #222; margin-bottom: 20px; text-align: center; }
+  .compare-wrap { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow-x: auto; }
+  .compare-wrap th { text-align: center; }
+  .compare-wrap td { text-align: center; }
+  .col-rt td { background: #FFF5F7; font-weight: 600; color: #FA0050; }
+  .col-rt th { background: #FFF0F3; color: #FA0050; font-size: 0.8rem; }
+  .check { color: #00B894; font-weight: 700; font-size: 1rem; }
+  .cross { color: #ccc; }
+  .mid   { color: #FF9100; font-weight: 600; }
+
+  /* Summary section */
+  .summary-section { max-width: 900px; margin: 0 auto 40px; background: #fff; border-radius: 20px; padding: 32px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-top: 4px solid #FA0050; }
+  .summary-section h2 { font-size: 1.2rem; font-weight: 700; color: #222; margin-bottom: 20px; text-align: center; }
+  .summary-items { display: flex; flex-direction: column; gap: 10px; }
+  .summary-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: #f9f9f9; font-size: 0.88rem; color: #555; }
+  .summary-item .tag { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; flex-shrink: 0; }
+  .tag-g { background: #E8FFF5; color: #00B894; }
+  .tag-o { background: #FFF3E0; color: #FF9100; }
+  .tag-p { background: #F0EDFF; color: #6C5CE7; }
+  .summary-quote { text-align: center; margin-top: 24px; padding: 20px 24px; background: #FFF5F7; border-radius: 14px; font-size: 0.95rem; color: #FA0050; font-weight: 600; line-height: 1.7; border: 1px solid #FFCDD6; }
+
+  /* Roadmap */
+  .roadmap-section { max-width: 900px; margin: 0 auto 40px; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .roadmap-section h2 { font-size: 1.1rem; font-weight: 700; color: #222; margin-bottom: 20px; }
+  .roadmap-list { display: flex; flex-direction: column; gap: 10px; }
+  .roadmap-item { display: flex; align-items: center; gap: 12px; font-size: 0.88rem; color: #555; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+  .roadmap-item:last-child { border-bottom: none; }
+  .road-done { color: #00B894; font-size: 1.1rem; }
+  .road-todo { color: #ddd; font-size: 1.1rem; }
+
+  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+  .nav a:hover { background: #e0004a; }
+  .nav a.back { background: #ddd; color: #555; }
+  .nav a.back:hover { background: #ccc; }
+  .page-indicator { text-align: center; margin-top: 16px; font-size: 0.8rem; color: #bbb; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">REVIEWTIME</div>
+    <h1>사장님과 소비자, 모두를 위한 플랫폼</h1>
+    <p>데이터 기반 의사결정 + 주문 전 빠른 판단</p>
+  </div>
+
+  <div class="stakeholders">
+    <!-- 사장님 -->
+    <div class="stakeholder-card card-owner">
+      <div class="persona">
+        <div class="persona-icon">🏪</div>
+        <div class="persona-text">
+          <h2>사장님 (가게 운영자)</h2>
+          <p>"감이 아니라 숫자로 가게를 운영하세요"</p>
+        </div>
+      </div>
+      <div class="value-desc">리뷰 데이터를 통한 데이터 기반 의사결정으로 문제를 정확히 특정하고 개선 효과를 측정합니다.</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div>
+            <div class="step-title">트렌드 파악</div>
+            <div class="step-desc">주/월별 별점 변화 추이 확인</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div>
+            <div class="step-title">문제 특정</div>
+            <div class="step-desc">카테고리별 분석으로 정확한 문제 영역 식별</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div>
+            <div class="step-title">조치 실행</div>
+            <div class="step-desc">데이터에 기반한 구체적 개선 실행</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div>
+            <div class="step-title">효과 측정</div>
+            <div class="step-desc">다음 주기 분석에서 개선 효과 확인</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 소비자 -->
+    <div class="stakeholder-card card-user">
+      <div class="persona">
+        <div class="persona-icon">🛵</div>
+        <div class="persona-text">
+          <h2>소비자 (리뷰 소비자)</h2>
+          <p>"100개 리뷰 안 읽고 핵심만 파악하세요"</p>
+        </div>
+      </div>
+      <div class="value-desc">AI 요약과 트렌드 시각화로 빠른 주문 결정을 내리고 신뢰할 수 있는 선택을 합니다.</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div>
+            <div class="step-title">트렌드 확인</div>
+            <div class="step-desc">최근 별점 추이로 가게 상태 파악</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div>
+            <div class="step-title">카테고리 필터</div>
+            <div class="step-desc">음식/배달/서비스 등 관심 분야만 확인</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div>
+            <div class="step-title">AI 요약 확인</div>
+            <div class="step-desc">AI 생성 리포트로 핵심 내용 파악</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div>
+            <div class="step-title">주문 결정</div>
+            <div class="step-desc">데이터 기반 신뢰할 수 있는 선택</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature tables -->
+  <div class="feat-section">
+    <h2>핵심 기능 비교</h2>
+    <div class="feat-tables">
+      <div class="feat-table-wrap">
+        <h3 class="owner-h">🏪 사장님 입장</h3>
+        <table>
+          <thead><tr><th>기능</th><th>가치</th></tr></thead>
+          <tbody>
+            <tr><td>별점 트렌드 차트</td><td>매출 그래프처럼 직관적. 평점 변화를 1초에 파악</td></tr>
+            <tr><td>카테고리별 별점</td><td>"음식은 좋은데 배달이 문제" → 즉각 대응</td></tr>
+            <tr><td>전주/전월 비교</td><td>개선 조치 후 효과를 숫자로 확인</td></tr>
+            <tr><td>AI 요약 리포트</td><td>100개 리뷰를 3줄로 요약. 핵심 즉시 파악</td></tr>
+            <tr><td>급변 알림</td><td>"위생 불만 300% 증가" 위기 신호 조기 감지</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="feat-table-wrap">
+        <h3 class="user-h">🛵 소비자 입장</h3>
+        <table>
+          <thead><tr><th>기능</th><th>가치</th></tr></thead>
+          <tbody>
+            <tr><td>별점 트렌드 차트</td><td>"4.0점이어도 하락 추세면 경고"</td></tr>
+            <tr><td>카테고리별 별점</td><td>"배달 빠른 곳" 등 중요 항목만 확인</td></tr>
+            <tr><td>AI 요약</td><td>100개 리뷰 안 읽고 핵심을 1초에 파악</td></tr>
+            <tr><td>월별 추이</td><td>"예전엔 좋았는데 요즘 별로" 가게 회피</td></tr>
+            <tr><td>키워드 빈도</td><td>다수 vs 소수 의견 구분. 과민반응 방지</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison table -->
+  <div class="compare-section">
+    <h2>요약 vs 통계 — 둘 다 필요한 이유</h2>
+    <div class="compare-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>통계만</th>
+            <th>요약만</th>
+            <th class="col-rt" style="background:#FFF0F3; color:#FA0050;">ReviewTime</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>문제 파악</td>
+            <td>"3.1점, 하락"</td>
+            <td>"배달 불만 있음"</td>
+            <td style="background:#FFF5F7; font-weight:600; color:#FA0050;">"배달 3.1점(-0.5), 비 오는 날 온도 불만 집중"</td>
+          </tr>
+          <tr>
+            <td>조치 가능성</td>
+            <td class="cross">낮음</td>
+            <td class="mid">중간</td>
+            <td style="background:#FFF5F7;"><span class="check">✓</span> <strong>높음</strong> (원인 + 심각도)</td>
+          </tr>
+          <tr>
+            <td>추적 가능성</td>
+            <td class="check">✓ 높음</td>
+            <td class="cross">낮음</td>
+            <td style="background:#FFF5F7;"><span class="check">✓</span> <strong>높음</strong> (숫자 비교 + 맥락)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-section">
+    <h2>종합 가치 제안</h2>
+    <div class="summary-items">
+      <div class="summary-item">
+        <span class="tag tag-g">로컬</span>
+        kiwipiepy 로컬 분석 — 비용 $0, 75~85% 자동 처리
+      </div>
+      <div class="summary-item">
+        <span class="tag tag-o">LLM</span>
+        LLM 하이브리드 전략 — 토큰 25배 절약, 정확도 유지
+      </div>
+      <div class="summary-item">
+        <span class="tag tag-p">시각화</span>
+        주차별 트렌드 시각화 — 직관적인 데이터 기반 판단
+      </div>
+    </div>
+    <div class="summary-quote">
+      사장님의 의사결정과 소비자의 주문 판단,<br>
+      모두를 위한 데이터 기반 리뷰 인사이트 플랫폼
+    </div>
+  </div>
+
+  <!-- Roadmap -->
+  <div class="roadmap-section">
+    <h2>🗺️ 향후 확장 로드맵</h2>
+    <div class="roadmap-list">
+      <div class="roadmap-item"><span class="road-done">✅</span> HTML 시각적 리포트 출력 (6페이지 완료)</div>
+      <div class="roadmap-item"><span class="road-done">✅</span> 키워드 필터링 &amp; 리뷰 더보기 인터랙션</div>
+      <div class="roadmap-item"><span class="road-done">✅</span> W13~W16 기간 종합 AI 요약 자동 생성</div>
+      <div class="roadmap-item"><span class="road-done">✅</span> 업종별 가게 SVG 이미지 (12개 업종 커버)</div>
+      <div class="roadmap-item"><span class="road-done">✅</span> 주별 감정 분석 3색 통합 바 UI (긍정/중립/부정)</div>
+      <div class="roadmap-item"><span class="road-done">✅</span> 가게 목록 UI 개선 (이미지 표시, 클린 카드)</div>
+      <div class="roadmap-item"><span class="road-todo">⬜</span> cron 기반 자동 배치 실행</div>
+      <div class="roadmap-item"><span class="road-todo">⬜</span> PDF 리포트 내보내기</div>
+      <div class="roadmap-item"><span class="road-todo">⬜</span> 다중 LLM 지원 (Claude, OpenAI)</div>
+      <div class="roadmap-item"><span class="road-todo">⬜</span> 가게 간 비교 분석 (동일 업종 내 순위)</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="05-star-trend.html" class="back">&larr; 이전</a>
+    <a href="01-overview.html">처음으로 &rarr;</a>
+  </div>
+  <div class="page-indicator">6 / 6</div>
+</body>
+</html>

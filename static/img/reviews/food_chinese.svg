@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#FFF8F0"/>
+  <defs>
+    <radialGradient id="bowlG" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#E0E0E0"/>
+    </radialGradient>
+    <radialGradient id="jjajang" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#3E2723"/>
+      <stop offset="100%" stop-color="#1A0D00"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 그릇 그림자 -->
+  <ellipse cx="202" cy="248" rx="120" ry="14" fill="#00000018"/>
+  <!-- 그릇 바깥 -->
+  <ellipse cx="200" cy="232" rx="120" ry="14" fill="#BDBDBD"/>
+  <!-- 그릇 안쪽 -->
+  <ellipse cx="200" cy="218" rx="118" ry="14" fill="url(#bowlG)"/>
+  <rect x="82" y="130" width="236" height="88" rx="14" fill="#F5F5F5"/>
+  <ellipse cx="200" cy="130" rx="118" ry="14" fill="#FAFAFA"/>
+
+  <!-- 짜장 소스 -->
+  <ellipse cx="200" cy="158" rx="100" ry="52" fill="url(#jjajang)"/>
+
+  <!-- 면 (짜장 아래 살짝 보이는) -->
+  <path d="M120 175 Q140 165 160 178 Q180 190 200 178 Q220 165 240 178 Q260 190 278 178" fill="none" stroke="#F5DEB3" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+  <path d="M122 185 Q142 175 162 188 Q182 200 202 188 Q222 175 242 188 Q262 200 276 188" fill="none" stroke="#DEB887" stroke-width="3" opacity="0.4" stroke-linecap="round"/>
+
+  <!-- 짜장 소스 하이라이트 -->
+  <ellipse cx="185" cy="148" rx="40" ry="18" fill="#4E342E" opacity="0.6"/>
+
+  <!-- 오이 채 -->
+  <rect x="152" y="138" width="40" height="5" rx="2.5" fill="#81C784" transform="rotate(-15 152 138)"/>
+  <rect x="185" y="132" width="35" height="5" rx="2.5" fill="#A5D6A7" transform="rotate(-10 185 132)"/>
+  <rect x="215" y="136" width="38" height="5" rx="2.5" fill="#81C784" transform="rotate(-20 215 136)"/>
+
+  <!-- 당근 채 -->
+  <rect x="160" y="148" width="30" height="4" rx="2" fill="#FF7043" transform="rotate(10 160 148)"/>
+  <rect x="210" y="145" width="28" height="4" rx="2" fill="#FF8A65" transform="rotate(-5 210 145)"/>
+
+  <!-- 양파 조각 -->
+  <path d="M232 152 Q242 146 248 154 Q242 162 232 160Z" fill="#FFEB3B" opacity="0.8"/>
+  <path d="M148 155 Q158 149 164 157 Q158 165 148 163Z" fill="#FFEE58" opacity="0.8"/>
+
+  <!-- 달걀 프라이 (위에 얹은) -->
+  <ellipse cx="200" cy="140" rx="22" ry="18" fill="#FFF9C4"/>
+  <ellipse cx="200" cy="139" rx="12" ry="10" fill="#FFC107"/>
+  <ellipse cx="200" cy="138" rx="9" ry="8" fill="#FFD54F"/>
+
+  <!-- 단무지 옆 접시 -->
+  <ellipse cx="330" cy="235" rx="42" ry="10" fill="#00000012"/>
+  <ellipse cx="330" cy="225" rx="42" ry="10" fill="#E0E0E0"/>
+  <rect x="288" y="200" width="84" height="25" rx="8" fill="#F5F5F5"/>
+  <ellipse cx="330" cy="200" rx="42" ry="10" fill="#FAFAFA"/>
+  <!-- 단무지 조각들 -->
+  <rect x="298" y="196" width="12" height="8" rx="3" fill="#FFF176"/>
+  <rect x="315" y="196" width="12" height="8" rx="3" fill="#FFEE58"/>
+  <rect x="332" y="196" width="12" height="8" rx="3" fill="#FFF176"/>
+  <rect x="349" y="196" width="12" height="8" rx="3" fill="#FFEE58"/>
+
+  <!-- 숟가락 -->
+  <ellipse cx="78" cy="130" rx="14" ry="18" fill="#C0C0C0"/>
+  <ellipse cx="78" cy="130" rx="11" ry="15" fill="#D8D8D8"/>
+  <rect x="75" y="145" width="6" height="90" rx="3" fill="#C0C0C0"/>
+
+  <!-- 라벨 -->
+  <rect x="10" y="10" width="80" height="28" rx="14" fill="#B71C1C"/>
+  <text x="50" y="29" font-family="sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">짜장면</text>
+</svg>

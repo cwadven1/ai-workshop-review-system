@@ -3,14 +3,14 @@ from django.shortcuts import get_object_or_404
 
 from stores.models import Store
 
-from .models import MonthlySummary
+from .models import WeeklySummary
 
 
 def trends_data(request, store_id):
     store = get_object_or_404(Store, pk=store_id)
     summaries = (
-        MonthlySummary.objects.filter(store=store)
-        .order_by("year_month")
+        WeeklySummary.objects.filter(store=store)
+        .order_by("year_week")
     )
 
     data = {
@@ -22,7 +22,7 @@ def trends_data(request, store_id):
     }
 
     for s in summaries:
-        data["labels"].append(s.year_month)
+        data["labels"].append(s.year_week)
         data["ratings"].append(round(s.avg_rating, 1))
         data["review_counts"].append(s.review_count)
         dist = s.sentiment_distribution or {}

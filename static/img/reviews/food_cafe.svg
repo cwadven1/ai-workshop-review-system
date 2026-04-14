@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#F5EFE6"/>
+  <defs>
+    <radialGradient id="coffee" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#795548"/>
+      <stop offset="100%" stop-color="#3E2723"/>
+    </radialGradient>
+    <radialGradient id="milk" cx="40%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F5F5F5"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 테이블 -->
+  <rect x="0" y="240" width="400" height="60" rx="0" fill="#A1887F"/>
+  <rect x="0" y="236" width="400" height="8" rx="2" fill="#795548"/>
+
+  <!-- 받침대 그림자 -->
+  <ellipse cx="202" cy="248" rx="68" ry="10" fill="#00000020"/>
+  <!-- 받침대 -->
+  <ellipse cx="200" cy="242" rx="68" ry="10" fill="#D7CCC8"/>
+  <ellipse cx="200" cy="238" rx="65" ry="9" fill="#EFEBE9"/>
+
+  <!-- 손잡이 -->
+  <path d="M290 148 Q320 148 320 175 Q320 202 290 202" fill="none" stroke="#D7CCC8" stroke-width="14" stroke-linecap="round"/>
+  <path d="M290 148 Q315 148 315 175 Q315 200 290 200" fill="none" stroke="#EFEBE9" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- 컵 몸체 -->
+  <path d="M140 105 Q130 200 145 235 Q165 242 200 242 Q235 242 255 235 Q270 200 260 105Z" fill="#D7CCC8"/>
+  <path d="M143 108 Q133 200 148 233 Q168 240 200 240 Q232 240 252 233 Q267 200 257 108Z" fill="#EFEBE9"/>
+
+  <!-- 커피 (컵 내용물) -->
+  <path d="M143 108 L257 108 Q262 140 258 170 Q248 195 200 198 Q152 195 142 170 Q138 140 143 108Z" fill="url(#coffee)"/>
+
+  <!-- 라떼아트 (하트 모양) -->
+  <ellipse cx="200" cy="145" rx="65" ry="30" fill="#D7CCC8" opacity="0.25"/>
+
+  <!-- 우유 폼 -->
+  <path d="M165 132 Q185 122 200 130 Q215 122 235 132 Q232 152 218 158 Q209 162 200 158 Q191 162 182 158 Q168 152 165 132Z" fill="url(#milk)" opacity="0.9"/>
+
+  <!-- 라떼 하트 아트 -->
+  <path d="M193 138 Q196 133 200 138 Q204 133 207 138 Q207 148 200 155 Q193 148 193 138Z" fill="#8D6E63" opacity="0.7"/>
+  <circle cx="195" cy="137" r="4" fill="#8D6E63" opacity="0.7"/>
+  <circle cx="205" cy="137" r="4" fill="#8D6E63" opacity="0.7"/>
+
+  <!-- 컵 테두리 (위) -->
+  <ellipse cx="200" cy="108" rx="60" ry="12" fill="#D7CCC8"/>
+  <ellipse cx="200" cy="106" rx="57" ry="10" fill="#EFEBE9"/>
+
+  <!-- 컵 로고 -->
+  <circle cx="178" cy="185" r="16" fill="none" stroke="#BCAAA4" stroke-width="1.5"/>
+  <text x="178" y="190" font-family="serif" font-size="14" fill="#A1887F" text-anchor="middle" font-style="italic">C</text>
+
+  <!-- 빨대 -->
+  <rect x="248" y="68" width="7" height="88" rx="3.5" fill="#F48FB1" transform="rotate(8 248 68)"/>
+  <rect x="248" y="68" width="5" height="88" rx="2.5" fill="#F8BBD0" transform="rotate(8 248 68)"/>
+
+  <!-- 케이크 조각 옆에 -->
+  <!-- 접시 -->
+  <ellipse cx="342" cy="237" rx="45" ry="10" fill="#00000010"/>
+  <ellipse cx="342" cy="230" rx="45" ry="10" fill="#E0D5C5"/>
+  <rect x="297" y="195" width="90" height="35" rx="8" fill="#F5F0E8"/>
+  <ellipse cx="342" cy="195" rx="45" ry="10" fill="#FAF8F5"/>
+  <!-- 케이크 조각 -->
+  <path d="M318 195 L342 175 L366 195Z" fill="#FFE0B2"/>
+  <path d="M318 195 L342 185 L366 195 L366 210 L318 210Z" fill="#FFCC80"/>
+  <!-- 케이크 크림 -->
+  <path d="M318 195 L342 175 L366 195" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+  <path d="M318 195 L342 178 L366 195" fill="none" stroke="#FFF9C4" stroke-width="2"/>
+  <!-- 딸기 -->
+  <path d="M338 172 Q342 163 346 172 Q343 178 338 175Z" fill="#E53935"/>
+  <line x1="342" y1="163" x2="342" y2="158" stroke="#4CAF50" stroke-width="1.5"/>
+
+  <!-- 스팀 (커피 김) -->
+  <path d="M185 95 Q180 80 185 65 Q190 50 185 35" fill="none" stroke="#B0BEC5" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M200 90 Q195 75 200 60 Q205 45 200 30" fill="none" stroke="#B0BEC5" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+  <path d="M215 95 Q210 80 215 65 Q220 50 215 35" fill="none" stroke="#B0BEC5" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- 라벨 -->
+  <rect x="10" y="10" width="90" height="28" rx="14" fill="#4E342E"/>
+  <text x="55" y="29" font-family="sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">카페라떼</text>
+</svg>

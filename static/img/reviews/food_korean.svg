@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <!-- 배경 -->
+  <rect width="400" height="300" fill="#FFF5E6"/>
+  <!-- 나무 테이블 텍스처 -->
+  <rect width="400" height="300" fill="url(#wood)" opacity="0.15"/>
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#C8976A"/>
+      <stop offset="100%" stop-color="#A0714A"/>
+    </linearGradient>
+    <radialGradient id="bowlGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#8B4513"/>
+      <stop offset="100%" stop-color="#5C2E00"/>
+    </radialGradient>
+    <radialGradient id="soupGrad" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#D4622A"/>
+      <stop offset="100%" stop-color="#A03010"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 뚝배기 그림자 -->
+  <ellipse cx="202" cy="222" rx="80" ry="12" fill="#00000022"/>
+
+  <!-- 뚝배기 몸체 -->
+  <ellipse cx="200" cy="200" rx="90" ry="30" fill="#3A1A00"/>
+  <rect x="110" y="135" width="180" height="65" rx="8" fill="url(#bowlGrad)"/>
+  <ellipse cx="200" cy="135" rx="90" ry="25" fill="#6B3310"/>
+
+  <!-- 된장찌개 국물 -->
+  <ellipse cx="200" cy="135" rx="82" ry="21" fill="url(#soupGrad)"/>
+
+  <!-- 두부 조각 -->
+  <rect x="165" y="120" width="22" height="16" rx="3" fill="#FFFDE7" opacity="0.9"/>
+  <rect x="195" y="122" width="20" height="14" rx="3" fill="#FFFDE7" opacity="0.9"/>
+
+  <!-- 파 -->
+  <ellipse cx="148" cy="132" rx="12" ry="4" fill="#4CAF50" opacity="0.85"/>
+  <ellipse cx="240" cy="128" rx="10" ry="3" fill="#4CAF50" opacity="0.85"/>
+
+  <!-- 버섯 -->
+  <ellipse cx="225" cy="130" rx="9" ry="6" fill="#8D6E63"/>
+  <ellipse cx="225" cy="127" rx="9" ry="5" fill="#6D4C41"/>
+
+  <!-- 김치 -->
+  <ellipse cx="162" cy="130" rx="8" ry="5" fill="#E53935" opacity="0.8"/>
+
+  <!-- 뚝배기 손잡이 -->
+  <rect x="96" y="148" width="18" height="12" rx="6" fill="#3A1A00"/>
+  <rect x="286" y="148" width="18" height="12" rx="6" fill="#3A1A00"/>
+
+  <!-- 뚝배기 뚜껑 손잡이 -->
+  <ellipse cx="200" cy="108" rx="14" ry="7" fill="#5C2E00"/>
+  <ellipse cx="200" cy="105" rx="10" ry="5" fill="#8B4513"/>
+
+  <!-- 밥공기 (옆) -->
+  <ellipse cx="320" cy="215" rx="38" ry="12" fill="#00000015"/>
+  <ellipse cx="320" cy="200" rx="38" ry="12" fill="#E0D5B8"/>
+  <rect x="282" y="170" width="76" height="30" rx="5" fill="#F5F0DC"/>
+  <ellipse cx="320" cy="170" rx="38" ry="12" fill="#FFFDE7"/>
+
+  <!-- 밥알 표현 -->
+  <ellipse cx="310" cy="168" rx="3" ry="2" fill="#E8E0C0"/>
+  <ellipse cx="320" cy="166" rx="3" ry="2" fill="#E8E0C0"/>
+  <ellipse cx="330" cy="168" rx="3" ry="2" fill="#E8E0C0"/>
+  <ellipse cx="315" cy="172" rx="3" ry="2" fill="#E8E0C0"/>
+  <ellipse cx="325" cy="170" rx="3" ry="2" fill="#E8E0C0"/>
+
+  <!-- 젓가락 -->
+  <rect x="88" y="230" width="4" height="55" rx="2" fill="#8B6914" transform="rotate(-20 88 230)"/>
+  <rect x="98" y="230" width="4" height="55" rx="2" fill="#8B6914" transform="rotate(-18 98 230)"/>
+
+  <!-- 라벨 -->
+  <rect x="10" y="260" width="100" height="28" rx="14" fill="#E53935"/>
+  <text x="60" y="279" font-family="sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">된장찌개</text>
+</svg>

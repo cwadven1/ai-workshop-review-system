@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewTime - 분석 주기</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 50px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header p { font-size: 1rem; color: #888; }
+
+  /* Cycle type cards */
+  .cycle-types {
+    display: flex;
+    gap: 24px;
+    max-width: 960px;
+    margin: 0 auto 50px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cycle-card {
+    flex: 1;
+    min-width: 300px;
+    max-width: 450px;
+    border-radius: 20px;
+    padding: 30px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .cycle-monthly { border-top: 4px solid #6C5CE7; }
+  .cycle-weekly  { border-top: 4px solid #FA0050; }
+  .cycle-card h2 { margin-bottom: 12px; font-size: 1.2rem; }
+  .cycle-monthly h2 { color: #6C5CE7; }
+  .cycle-weekly h2  { color: #FA0050; }
+  .cycle-card .desc { font-size: 0.88rem; color: #777; margin-bottom: 20px; line-height: 1.5; }
+  .cycle-detail { display: flex; flex-direction: column; gap: 8px; }
+  .cycle-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; color: #555; }
+  .cycle-monthly .cycle-item { background: #F8F6FF; }
+  .cycle-weekly .cycle-item  { background: #FFF5F7; }
+  .cycle-icon { font-size: 1.1rem; min-width: 26px; text-align: center; }
+
+  /* Flow section */
+  .section-title { text-align: center; color: #222; font-size: 1.3rem; font-weight: 700; margin: 40px 0 24px; }
+
+  .cycle-flow-wrap { max-width: 900px; margin: 0 auto 50px; }
+  .cycle-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .cf-node {
+    padding: 12px 18px;
+    border-radius: 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 110px;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+  .cf-node small { display: block; font-size: 0.7rem; font-weight: 400; margin-top: 2px; opacity: 0.8; }
+  .cf-arrow { font-size: 1.4rem; color: #ccc; padding: 0 6px; }
+  .cf-m { border: 2px solid #6C5CE7; color: #6C5CE7; }
+  .cf-w { border: 2px solid #FA0050; color: #FA0050; }
+  .cf-r { border: 2px solid #00B894; color: #00B894; }
+
+  .legend-row { text-align: center; margin-top: 20px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #888; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; }
+
+  /* Data table */
+  .table-section { max-width: 900px; margin: 0 auto 50px; }
+  .table-section h2 { font-size: 1.1rem; font-weight: 700; color: #222; margin-bottom: 16px; }
+  .data-table-wrap { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f8f8; font-size: 0.78rem; color: #888; font-weight: 600; padding: 10px 14px; text-align: left; }
+  td { font-size: 0.85rem; color: #555; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: none; }
+  .trend-up { color: #00B894; font-weight: 700; }
+  .trend-base { color: #888; font-weight: 600; }
+  .w-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .w13 { background: #fff3e0; color: #FF9100; }
+  .w14 { background: #e8f5e9; color: #43a047; }
+  .w15 { background: #e3f2fd; color: #1976d2; }
+  .w16 { background: #FFF0F3; color: #FA0050; }
+  .note-row td { background: #F8F6FF; font-size: 0.82rem; color: #6C5CE7; font-weight: 600; text-align: center; padding: 10px 14px; border-radius: 0 0 8px 8px; }
+
+  /* Decision table */
+  .decision-section { max-width: 900px; margin: 0 auto 50px; }
+  .decision-section h2 { font-size: 1.1rem; font-weight: 700; color: #222; margin-bottom: 16px; }
+
+  /* Code block */
+  .code-section { max-width: 900px; margin: 0 auto 40px; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .code-section h3 { font-size: 1rem; font-weight: 700; color: #222; margin-bottom: 16px; }
+  .code-block { background: #1a1a2e; border-radius: 12px; padding: 20px 24px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; color: #e0e0e0; line-height: 1.7; overflow-x: auto; }
+  .code-block .kw { color: #ff79c6; }
+  .code-block .cls { color: #8be9fd; }
+  .code-block .fn { color: #50fa7b; }
+  .code-block .str { color: #f1fa8c; }
+  .code-block .cm { color: #6272a4; font-style: italic; }
+
+  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+  .nav a:hover { background: #e0004a; }
+  .nav a.back { background: #ddd; color: #555; }
+  .nav a.back:hover { background: #ccc; }
+  .page-indicator { text-align: center; margin-top: 16px; font-size: 0.8rem; color: #bbb; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">REVIEWTIME</div>
+    <h1>월별 종합 + 주별 실시간 모니터링</h1>
+    <p>ISO 8601 기준 이중 분석 주기</p>
+  </div>
+
+  <div class="cycle-types">
+    <div class="cycle-card cycle-monthly">
+      <h2>📅 월별 분석</h2>
+      <p class="desc">1월~12월, 월 마감 후 해당 월 전체 리뷰를 확정 분석합니다.</p>
+      <div class="cycle-detail">
+        <div class="cycle-item"><span class="cycle-icon">🎯</span> 종합 성과 평가</div>
+        <div class="cycle-item"><span class="cycle-icon">📊</span> 전월 / 전년 동월 비교</div>
+        <div class="cycle-item"><span class="cycle-icon">✅</span> 리뷰 수 많아 높은 신뢰도</div>
+        <div class="cycle-item"><span class="cycle-icon">🔒</span> 월 마감 후 확정 분석</div>
+      </div>
+    </div>
+    <div class="cycle-card cycle-weekly">
+      <h2>⚡ 주별 분석</h2>
+      <p class="desc">ISO 8601 기준 월요일 시작, 진행 중인 달의 실시간 추이를 모니터링합니다.</p>
+      <div class="cycle-detail">
+        <div class="cycle-item"><span class="cycle-icon">📈</span> 실시간 추이 모니터링</div>
+        <div class="cycle-item"><span class="cycle-icon">🚨</span> 급변 감지 → 즉시 알림</div>
+        <div class="cycle-item"><span class="cycle-icon">📅</span> ISO 8601 월요일 시작</div>
+        <div class="cycle-item"><span class="cycle-icon">🔍</span> 단기 트렌드 파악에 최적</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">분석 흐름</h2>
+  <div class="cycle-flow-wrap">
+    <div class="cycle-flow">
+      <div class="cf-node cf-m">3월 월별 분석<small>3/1~3/31 확정</small></div>
+      <div class="cf-arrow">→</div>
+      <div class="cf-node cf-w">W13<small>3/30~4/5 · 3.0점</small></div>
+      <div class="cf-arrow">→</div>
+      <div class="cf-node cf-w">W14<small>4/6~4/12 · 3.5점</small></div>
+      <div class="cf-arrow">→</div>
+      <div class="cf-node cf-w">W15<small>4/13~4/19 · 4.5점</small></div>
+      <div class="cf-arrow">→</div>
+      <div class="cf-node cf-w">W16<small>4/20~4/26 · 5.0점</small></div>
+      <div class="cf-arrow">→</div>
+      <div class="cf-node cf-r">4월 월별 분석<small>4월 전체 확정</small></div>
+    </div>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="border-color:#6C5CE7;"></div> 월별 분석</div>
+      <div class="legend-item"><div class="legend-dot" style="border-color:#FA0050;"></div> 주별 분석</div>
+      <div class="legend-item"><div class="legend-dot" style="border-color:#00B894;"></div> 월별 확정</div>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <h2>📊 실제 데이터: 파스타 팩토리 W13~W16</h2>
+    <div class="data-table-wrap">
+      <table>
+        <thead><tr><th>주차</th><th>평균 평점</th><th>리뷰 수</th><th>주요 키워드</th><th>트렌드</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="w-badge w13">2026-W13</span></td>
+            <td>3.0 ★★★☆☆</td>
+            <td>3건</td>
+            <td>보통, 무난한, 평범한</td>
+            <td class="trend-base">기준</td>
+          </tr>
+          <tr>
+            <td><span class="w-badge w14">2026-W14</span></td>
+            <td>3.5 ★★★½☆</td>
+            <td>2건</td>
+            <td>보통, 무난한, 평범한</td>
+            <td class="trend-up">↑ 상승</td>
+          </tr>
+          <tr>
+            <td><span class="w-badge w15">2026-W15</span></td>
+            <td>4.5 ★★★★½</td>
+            <td>4건</td>
+            <td>리뉴얼, 맛집, 크림소스</td>
+            <td class="trend-up">↑↑ 상승</td>
+          </tr>
+          <tr>
+            <td><span class="w-badge w16">2026-W16</span></td>
+            <td>5.0 ★★★★★</td>
+            <td>3건</td>
+            <td>바삭한, 알덴테, 리뉴얼</td>
+            <td class="trend-up">↑↑↑ 최고점</td>
+          </tr>
+          <tr class="note-row">
+            <td colspan="5">→ W15부터 "리뉴얼" 키워드 등장 → 품질 개선 효과 확인 가능</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="decision-section">
+    <h2>⚙️ 설계 결정사항</h2>
+    <div class="data-table-wrap">
+      <table>
+        <thead><tr><th>항목</th><th>결정</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>주차 기준</td><td>월요일 시작</td><td>ISO 8601 표준, 영업일 기준 자연스러움</td></tr>
+          <tr><td>분석 타이밍</td><td>배치 (수동 트리거)</td><td>프로토타입 단계, 추후 cron 추가 가능</td></tr>
+          <tr><td>월/주 겹침 처리</td><td>더 많은 날이 속한 월로 귀속</td><td>4/28~5/4 → 4월 5주차 (4일 &gt; 3일)</td></tr>
+          <tr><td>AI 총평 원칙</td><td>원인 분석만, 통계 수치 배제</td><td>수치는 차트로, 총평은 "왜" 변했는지에 집중</td></tr>
+          <tr><td>최근 분석 기간</td><td>최근 4주 (W13~W16)</td><td>단기 트렌드 파악에 최적</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="code-section">
+    <h3>🗃️ WeeklySummary 데이터 모델</h3>
+    <div class="code-block">
+<span class="kw">class</span> <span class="cls">WeeklySummary</span>(models.Model):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;store = ForeignKey(<span class="cls">Store</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;year_week = CharField()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># "2026-W16"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;review_count = IntegerField()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;avg_rating = DecimalField()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;rating_change = DecimalField()&nbsp;&nbsp;&nbsp;<span class="cm"># 전주 대비 변화</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;sentiment_distribution = JSONField()  <span class="cm"># {"positive": 3, "neutral": 0, "negative": 0}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;top_keywords = JSONField()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># [{"keyword": "리뉴얼", "count": 3}]</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;summary = TextField()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># AI 생성 주별 요약</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;highlights = JSONField()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># {"good_points": [...], "bad_points": [...]}</span>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="03-token-strategy.html" class="back">&larr; 이전</a>
+    <a href="05-star-trend.html">다음: 별점 트렌드 시각화 &rarr;</a>
+  </div>
+  <div class="page-indicator">4 / 6</div>
+</body>
+</html>

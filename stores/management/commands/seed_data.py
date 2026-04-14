@@ -3,27 +3,25 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
-from reviews.models import MonthlySummary, Review
+from reviews.models import Review, WeeklySummary
 from stores.models import Menu, Store
 
-# 최근 12개월 연월 리스트 생성
-def get_recent_months(count=12):
+
+# 최근 N주 연주차 리스트 생성 (예: ["2025-W10", ..., "2025-W21"])
+def get_recent_weeks(count=12):
     today = date.today()
-    months = []
-    for i in range(count - 1, -1, -1):
-        d = today.replace(day=1) - timedelta(days=i * 30)
-        ym = d.strftime("%Y-%m")
-        if ym not in months:
-            months.append(ym)
-    # 중복 제거 후 정확히 count개 보장
-    if len(months) < count:
-        first = date.fromisoformat(months[0] + "-01")
-        while len(months) < count:
-            first = (first.replace(day=1) - timedelta(days=1)).replace(day=1)
-            months.insert(0, first.strftime("%Y-%m"))
-    return months[-count:]
+    weeks = []
+    seen = set()
+    d = today
+    while len(weeks) < count:
+        iso = d.isocalendar()
+        yw = f"{iso[0]}-W{iso[1]:02d}"
+        if yw not in seen:
+            weeks.insert(0, yw)
+            seen.add(yw)
+        d -= timedelta(days=7)
+    return weeks
 
 
 STORES_DATA = [
@@ -32,7 +30,7 @@ STORES_DATA = [
         "category": "korean",
         "address": "서울시 강남구 역삼동 123-4",
         "phone": "02-1234-5678",
-        "image_url": "",
+        "image_url": "img/stores/korean_hansik.svg",
         "menus": [
             {"name": "된장찌개", "price": 8000, "is_popular": False, "description": ""},
             {"name": "비빔밥", "price": 9000, "is_popular": True, "description": ""},
@@ -47,7 +45,7 @@ STORES_DATA = [
         "category": "japanese",
         "address": "서울시 마포구 연남동 456-7",
         "phone": "02-2345-6789",
-        "image_url": "",
+        "image_url": "img/stores/japanese_sushi.svg",
         "menus": [
             {"name": "런치 오마카세", "price": 45000, "is_popular": True, "description": ""},
             {"name": "디너 오마카세", "price": 85000, "is_popular": True, "description": ""},
@@ -61,7 +59,7 @@ STORES_DATA = [
         "category": "western",
         "address": "서울시 서초구 반포동 789-0",
         "phone": "02-3456-7890",
-        "image_url": "",
+        "image_url": "img/stores/western_pasta.svg",
         "menus": [
             {"name": "까르보나라", "price": 14000, "is_popular": True, "description": ""},
             {"name": "봉골레", "price": 13000, "is_popular": False, "description": ""},
@@ -70,13 +68,14 @@ STORES_DATA = [
         ],
         # 셰프 교체 시나리오: 악평 → 호평 (더 극적)
         "rating_pattern": [3.0, 2.5, 2.2, 1.8, 2.0, 1.7, 2.0, 2.5, 3.2, 3.8, 4.3, 4.7],
+        "review_counts_override": [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 1, 2],
     },
     {
         "name": "황금 짜장",
         "category": "chinese",
         "address": "서울시 중구 을지로 321-5",
         "phone": "02-4567-8901",
-        "image_url": "",
+        "image_url": "img/stores/chinese_jajang.svg",
         "menus": [
             {"name": "짜장면", "price": 7000, "is_popular": True, "description": ""},
             {"name": "짬뽕", "price": 8000, "is_popular": False, "description": ""},
@@ -91,7 +90,7 @@ STORES_DATA = [
         "category": "chicken",
         "address": "서울시 송파구 잠실동 654-2",
         "phone": "02-5678-9012",
-        "image_url": "",
+        "image_url": "img/stores/chicken_basakchicken.svg",
         "menus": [
             {"name": "후라이드치킨", "price": 18000, "is_popular": True, "description": ""},
             {"name": "양념치킨", "price": 19000, "is_popular": True, "description": ""},
@@ -106,7 +105,7 @@ STORES_DATA = [
         "category": "japanese",
         "address": "서울시 용산구 이태원동 111-2",
         "phone": "02-6789-0123",
-        "image_url": "",
+        "image_url": "img/stores/japanese_donkatsu.svg",
         "menus": [
             {"name": "로스카츠", "price": 11000, "is_popular": True, "description": ""},
             {"name": "치즈카츠", "price": 12000, "is_popular": True, "description": ""},
@@ -121,7 +120,7 @@ STORES_DATA = [
         "category": "korean",
         "address": "서울시 마포구 망원동 222-3",
         "phone": "02-7890-1234",
-        "image_url": "",
+        "image_url": "img/stores/korean_tteokbokki.svg",
         "menus": [
             {"name": "국물떡볶이", "price": 6000, "is_popular": True, "description": ""},
             {"name": "로제떡볶이", "price": 7000, "is_popular": True, "description": ""},
@@ -137,6 +136,84 @@ STORES_DATA = [
         # 9~12월: 다시 동네 떡볶이집 → 3~8개, 평점 3.4~3.7
         "rating_pattern": [3.5, 3.3, 3.6, 3.4, 4.2, 4.5, 4.3, 3.9, 3.7, 3.5, 3.6, 3.4],
         "review_counts_override": [3, 2, 4, 3, 28, 35, 25, 12, 8, 5, 4, 3],  # 총 132개, 5~6월에 몰림
+    },
+    {
+        "name": "나폴리 피자",
+        "category": "pizza",
+        "address": "서울시 홍대 와우산로 55-1",
+        "phone": "02-9012-3456",
+        "image_url": "img/stores/pizza_napoli.svg",
+        "menus": [
+            {"name": "마르게리타", "price": 16000, "is_popular": True, "description": ""},
+            {"name": "페퍼로니", "price": 18000, "is_popular": True, "description": ""},
+            {"name": "사계절 피자", "price": 19000, "is_popular": False, "description": ""},
+            {"name": "칼초네", "price": 17000, "is_popular": False, "description": ""},
+        ],
+        # 신규 오픈 → 점점 알려지는 시나리오
+        "rating_pattern": [3.2, 3.4, 3.5, 3.7, 3.8, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.5],
+        "review_counts_override": [2, 3, 3, 4, 5, 6, 8, 9, 10, 11, 12, 14],
+    },
+    {
+        "name": "브런치 카페 모닝",
+        "category": "cafe",
+        "address": "서울시 성수동 뚝섬로 77-3",
+        "phone": "02-8901-2345",
+        "image_url": "img/stores/cafe_morning.svg",
+        "menus": [
+            {"name": "아메리카노", "price": 4500, "is_popular": True, "description": ""},
+            {"name": "카페라떼", "price": 5000, "is_popular": True, "description": ""},
+            {"name": "에그 베네딕트", "price": 13000, "is_popular": True, "description": ""},
+            {"name": "아보카도 토스트", "price": 11000, "is_popular": False, "description": ""},
+            {"name": "티라미수", "price": 7000, "is_popular": False, "description": ""},
+        ],
+        # 안정적인 고평점 유지
+        "rating_pattern": [4.3, 4.4, 4.3, 4.5, 4.4, 4.3, 4.5, 4.6, 4.4, 4.5, 4.6, 4.7],
+    },
+    {
+        "name": "강남 불판 삼겹살",
+        "category": "korean",
+        "address": "서울시 강남구 논현동 88-5",
+        "phone": "02-0123-4567",
+        "image_url": "img/stores/korean_samgyeopsal.svg",
+        "menus": [
+            {"name": "삼겹살", "price": 15000, "is_popular": True, "description": ""},
+            {"name": "목살", "price": 15000, "is_popular": True, "description": ""},
+            {"name": "냉면", "price": 8000, "is_popular": False, "description": ""},
+            {"name": "된장찌개", "price": 3000, "is_popular": False, "description": ""},
+        ],
+        # 입소문 타고 상승 후 안정
+        "rating_pattern": [3.6, 3.7, 3.9, 4.0, 4.1, 4.2, 4.3, 4.3, 4.2, 4.3, 4.4, 4.3],
+    },
+    {
+        "name": "사천 마라탕",
+        "category": "chinese",
+        "address": "서울시 신촌 명물길 33-7",
+        "phone": "02-1122-3344",
+        "image_url": "img/stores/chinese_malatang.svg",
+        "menus": [
+            {"name": "마라탕 (소)", "price": 9000, "is_popular": False, "description": ""},
+            {"name": "마라탕 (대)", "price": 13000, "is_popular": True, "description": ""},
+            {"name": "마라샹궈", "price": 15000, "is_popular": True, "description": ""},
+            {"name": "탕후루", "price": 5000, "is_popular": False, "description": ""},
+        ],
+        # 마라 트렌드로 초반 대호평, 최근 4주 급격한 품질 하락
+        "rating_pattern": [4.5, 4.6, 4.7, 4.8, 4.8, 4.7, 4.6, 4.5, 2.8, 2.5, 2.3, 2.2],
+        "review_counts_override": [15, 18, 20, 25, 25, 20, 18, 15, 5, 5, 5, 5],
+    },
+    {
+        "name": "르 스테이크",
+        "category": "western",
+        "address": "서울시 강남구 청담동 9-11",
+        "phone": "02-5566-7788",
+        "image_url": "img/stores/western_steak.svg",
+        "menus": [
+            {"name": "채끝 스테이크", "price": 45000, "is_popular": True, "description": ""},
+            {"name": "안심 스테이크", "price": 55000, "is_popular": True, "description": ""},
+            {"name": "파스타", "price": 18000, "is_popular": False, "description": ""},
+            {"name": "수프", "price": 8000, "is_popular": False, "description": ""},
+        ],
+        # 꾸준히 높은 평점 유지
+        "rating_pattern": [4.4, 4.5, 4.4, 4.6, 4.5, 4.6, 4.7, 4.5, 4.6, 4.7, 4.6, 4.8],
     },
 ]
 
@@ -195,6 +272,26 @@ POSITIVE_REVIEWS = {
         "배달 빠르고 치킨도 바삭바삭!",
         "간장치킨이 짭짤하면서 고소해요. 중독성 있음!",
     ],
+    "pizza": [
+        "도우가 얇고 바삭해서 정말 맛있어요. 나폴리 스타일 제대로!",
+        "치즈가 진하고 탱탱해요. 한 조각만 먹을 수가 없어요!",
+        "마르게리타 토마토소스가 신선하고 맛있어요.",
+        "화덕에서 구운 향기가 진짜 피자집 느낌이에요.",
+        "페퍼로니가 두툼하고 풍미가 깊어요!",
+        "칼초네 속 재료가 듬뿍 들어있어요. 가성비 최고!",
+        "사계절 피자 채소 신선도가 달라요. 건강한 맛!",
+        "오픈한 지 얼마 안 됐는데 동네 맛집 등극했어요.",
+    ],
+    "cafe": [
+        "커피 원두 향이 정말 풍부해요. 전문 로스터리 수준!",
+        "에그 베네딕트가 이렇게 맛있는 건 처음이에요.",
+        "아보카도 토스트 재료가 신선하고 양도 푸짐해요.",
+        "인테리어도 예쁘고 커피도 맛있어요. 데이트 코스로 딱!",
+        "카페라떼 우유 거품이 부드럽고 온도도 딱 좋아요.",
+        "브런치 메뉴가 다양하고 가격도 합리적이에요.",
+        "주말 오전에 오기 딱 좋은 분위기예요. 힐링됩니다.",
+        "티라미수가 진하고 달달해요. 커피랑 완벽 조합!",
+    ],
 }
 
 NEGATIVE_REVIEWS = {
@@ -237,6 +334,20 @@ NEGATIVE_REVIEWS = {
         "배달이 좀 늦었어요. 1시간 넘게 기다림.",
         "양이 좀 적은 느낌이에요.",
     ],
+    "pizza": [
+        "도우가 좀 두꺼워서 빵 먹는 느낌이에요.",
+        "치즈가 너무 짜요. 물 많이 마시게 됨.",
+        "가격에 비해 피자 크기가 작아요.",
+        "배달 오면서 눅눅해졌어요. 피자는 직접 먹어야 하나봐요.",
+        "토핑이 생각보다 적어요. 사진이랑 달랐어요.",
+    ],
+    "cafe": [
+        "커피가 좀 쓴 편이에요. 원두 취향 안 맞을 수도 있어요.",
+        "브런치 메뉴 가격이 좀 비싼 편이에요.",
+        "주말엔 너무 붐벼서 자리 잡기 힘들어요.",
+        "웨이팅이 길어요. 인기 많아서 어쩔 수 없나봐요.",
+        "음식이 나오는 데 너무 오래 걸렸어요.",
+    ],
 }
 
 NEUTRAL_REVIEWS = [
@@ -247,6 +358,43 @@ NEUTRAL_REVIEWS = [
     "한 번쯤은 먹을 만한데 재주문은 모르겠어요.",
 ]
 
+# ── 감성 분석용 키워드 사전 (부분 문자열 매칭) ──────────────────────────
+SENTIMENT_POSITIVE_WORDS = [
+    "맛있", "최고", "훌륭", "맛집", "강추", "재방문", "만족", "신선", "바삭",
+    "부드럽", "환상", "완벽", "좋아", "좋고", "좋은", "일품", "쫄깃", "풍부",
+    "진한", "고소", "달달", "얼큰", "시원", "따끈", "따뜻", "대만족", "미쳤",
+    "정성", "합리적", "친절", "힐링", "인생", "대박", "추천", "가성비",
+    "푸짐", "촉촉", "빠르", "줄 서서", "기대 이상", "완전 다른", "강추",
+    "딱이", "딱 좋", "맛집 됐", "동네 최고", "리뉴얼",
+]
+
+SENTIMENT_NEGATIVE_WORDS = [
+    "별로", "실망", "느끼", "맛없", "불친절", "질긴", "눅눅", "비린",
+    "밍밍", "아쉽", "기름", "식었", "차갑", "딱딱", "짜요", "짠", "달아요",
+    "불어서", "퍼져", "늦어", "늦었", "적어", "줄었", "작아", "최악",
+    "문제", "불만", "붐벼", "오래 걸", "안 맞", "그만큼의 맛은 아님",
+    "그냥 평범", "기대했는데", "이 가격", "소스도 아쉽", "눅눅해",
+]
+
+
+def analyze_sentiment_from_content(content: str) -> str:
+    """리뷰 텍스트를 분석하여 긍정/중립/부정 반환 (키워드 룰 기반)"""
+    score = 0
+    for word in SENTIMENT_POSITIVE_WORDS:
+        if word in content:
+            score += 1
+    for word in SENTIMENT_NEGATIVE_WORDS:
+        if word in content:
+            score -= 1
+
+    if score > 0:
+        return "positive"
+    elif score < 0:
+        return "negative"
+    else:
+        return "neutral"
+
+
 KEYWORDS_MAP = {
     "positive": {
         "korean": ["맛있는", "푸짐한", "집밥", "양많은", "재방문"],
@@ -254,6 +402,8 @@ KEYWORDS_MAP = {
         "western": ["크림소스", "알덴테", "바삭한", "리뉴얼", "맛집"],
         "chinese": ["깊은맛", "바삭한", "시원한", "가성비", "양많은"],
         "chicken": ["바삭한", "매콤한", "푸짐한", "맥주안주", "고소한"],
+        "pizza": ["바삭한도우", "진한치즈", "신선토핑", "화덕향", "가성비"],
+        "cafe": ["풍부한향", "부드러운", "인테리어", "브런치", "힐링"],
     },
     "negative": {
         "korean": ["짠맛", "배달늦음", "양적음", "식은음식"],
@@ -261,6 +411,8 @@ KEYWORDS_MAP = {
         "western": ["느끼한", "퍼진면", "밍밍한", "비싼", "불어서"],
         "chinese": ["달달한", "양줄음", "배달늦음", "눅눅한", "맛변함"],
         "chicken": ["기름진", "배달늦음", "양적음"],
+        "pizza": ["눅눅한", "양적음", "비싼", "짠맛", "사진과달라"],
+        "cafe": ["비싼", "웨이팅긴", "쓴커피", "느린서비스", "붐빔"],
     },
 }
 
@@ -270,13 +422,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("기존 데이터 삭제 중...")
-        MonthlySummary.objects.all().delete()
+        WeeklySummary.objects.all().delete()
         Review.objects.all().delete()
         Menu.objects.all().delete()
         Store.objects.all().delete()
 
-        months = get_recent_months(12)
-        self.stdout.write(f"대상 월: {months}")
+        weeks = get_recent_weeks(12)
+        self.stdout.write(f"대상 주차: {weeks}")
 
         for store_data in STORES_DATA:
             store = Store.objects.create(
@@ -291,37 +443,40 @@ class Command(BaseCommand):
             for menu_data in store_data["menus"]:
                 Menu.objects.create(store=store, **menu_data)
 
-            # 월별 리뷰 생성
+            # 주별 리뷰 생성
             all_reviews = []
             pattern = store_data["rating_pattern"]
 
-            # 월별 리뷰 수 결정
+            # 주별 리뷰 수 결정
             if "review_counts_override" in store_data:
-                # 월별 리뷰 수 직접 지정
-                review_counts_per_month = store_data["review_counts_override"]
+                review_counts_per_week = store_data["review_counts_override"]
             elif "review_override" in store_data:
-                # 총 리뷰 수 균등 분배
                 total_target = store_data["review_override"]
-                base = total_target // len(months)
-                remainder = total_target % len(months)
-                review_counts_per_month = [base + (1 if i < remainder else 0) for i in range(len(months))]
+                base = total_target // len(weeks)
+                remainder = total_target % len(weeks)
+                review_counts_per_week = [base + (1 if i < remainder else 0) for i in range(len(weeks))]
             else:
-                # 기본: 랜덤
-                review_counts_per_month = [random.randint(7, 12) for _ in range(len(months))]
+                review_counts_per_week = [random.randint(5, 8) for _ in range(len(weeks))]
 
-            for i, ym in enumerate(months):
+            for i, yw in enumerate(weeks):
                 target_rating = pattern[i]
-                review_count = review_counts_per_month[i]
+                review_count = review_counts_per_week[i]
 
-                monthly_reviews = []
+                weekly_reviews = []
                 for j in range(review_count):
                     rating = self._generate_rating(target_rating)
                     sentiment, content, keywords = self._generate_review_content(
                         store_data["category"], rating
                     )
-                    year, month_num = ym.split("-")
-                    day = random.randint(1, 28)
-                    review_date = date(int(year), int(month_num), day)
+                    year_str, week_str = yw.split("-W")
+                    day_of_week = random.randint(1, 7)
+                    review_date = date.fromisocalendar(int(year_str), int(week_str), day_of_week)
+
+                    # 각 주 첫 번째 리뷰에만 이미지 1장 첨부
+                    if j == 0:
+                        images = [f"img/reviews/food_{store_data['category']}.svg"]
+                    else:
+                        images = []
 
                     review = Review.objects.create(
                         store=store,
@@ -330,15 +485,17 @@ class Command(BaseCommand):
                         sentiment=sentiment,
                         sentiment_score=self._sentiment_score(sentiment),
                         keywords=keywords,
-                        year_month=ym,
+                        year_month=review_date.strftime("%Y-%m"),
+                        year_week=yw,
                         review_date=review_date,
                         source="yogiyo",
+                        images=images,
                     )
-                    monthly_reviews.append(review)
+                    weekly_reviews.append(review)
                     all_reviews.append(review)
 
-                # 월별 요약 생성
-                self._create_monthly_summary(store, ym, monthly_reviews, pattern, i)
+                # 주별 요약 생성
+                self._create_weekly_summary(store, yw, weekly_reviews)
 
             # 가게 전체 평균 업데이트
             total = len(all_reviews)
@@ -350,33 +507,33 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("시드 데이터 생성 완료!"))
         self.stdout.write(f"  가게: {Store.objects.count()}개")
         self.stdout.write(f"  리뷰: {Review.objects.count()}개")
-        self.stdout.write(f"  월별 요약: {MonthlySummary.objects.count()}개")
+        self.stdout.write(f"  주별 요약: {WeeklySummary.objects.count()}개")
 
     def _generate_rating(self, target):
         """타겟 평점 주변으로 랜덤 평점 생성"""
-        r = target + random.uniform(-1.0, 1.0)
+        r = target + random.uniform(-0.5, 0.5)
         return max(1, min(5, round(r)))
 
     def _generate_review_content(self, category, rating):
-        """평점에 따라 리뷰 내용, 감정, 키워드 생성"""
+        """평점에 따라 리뷰 내용 선택 후 내용 기반으로 감성 분류"""
         if rating >= 4:
-            sentiment = "positive"
             reviews = POSITIVE_REVIEWS.get(category, POSITIVE_REVIEWS["korean"])
             content = random.choice(reviews)
             kw_pool = KEYWORDS_MAP["positive"].get(
                 category, KEYWORDS_MAP["positive"]["korean"]
             )
         elif rating <= 2:
-            sentiment = "negative"
             reviews = NEGATIVE_REVIEWS.get(category, NEGATIVE_REVIEWS["korean"])
             content = random.choice(reviews)
             kw_pool = KEYWORDS_MAP["negative"].get(
                 category, KEYWORDS_MAP["negative"]["korean"]
             )
         else:
-            sentiment = "neutral"
             content = random.choice(NEUTRAL_REVIEWS)
             kw_pool = ["보통", "무난한", "평범한"]
+
+        # 평점이 아닌 리뷰 내용 텍스트를 분석하여 감성 결정
+        sentiment = analyze_sentiment_from_content(content)
 
         keywords = random.sample(kw_pool, min(3, len(kw_pool)))
         return sentiment, content, keywords
@@ -388,8 +545,8 @@ class Command(BaseCommand):
             return round(random.uniform(-1.0, -0.4), 2)
         return round(random.uniform(-0.3, 0.3), 2)
 
-    def _create_monthly_summary(self, store, year_month, reviews, pattern, month_idx):
-        """월별 요약 데이터 생성"""
+    def _create_weekly_summary(self, store, year_week, reviews):
+        """주별 요약 데이터 생성"""
         ratings = [r.rating for r in reviews]
         avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else 0
 
@@ -407,18 +564,21 @@ class Command(BaseCommand):
         top_keywords = [{"keyword": kw, "count": cnt} for kw, cnt in top_keywords]
 
         rating_change = 0.0
-        if month_idx > 0:
-            rating_change = round(pattern[month_idx] - pattern[month_idx - 1], 1)
+        prev_summary = WeeklySummary.objects.filter(
+            store=store, year_week__lt=year_week
+        ).order_by('-year_week').first()
+        if prev_summary:
+            rating_change = round(avg_rating - float(prev_summary.avg_rating), 1)
 
         summary_text = self._generate_dummy_summary(
-            store, year_month, avg_rating, sentiments, top_keywords, rating_change
+            store, year_week, avg_rating, sentiments, top_keywords, rating_change
         )
 
         highlights = self._generate_highlights(sentiments, top_keywords, rating_change)
 
-        MonthlySummary.objects.create(
+        WeeklySummary.objects.create(
             store=store,
-            year_month=year_month,
+            year_week=year_week,
             summary=summary_text,
             highlights=highlights,
             avg_rating=avg_rating,
@@ -429,7 +589,7 @@ class Command(BaseCommand):
         )
 
     def _generate_dummy_summary(
-        self, store, year_month, avg_rating, sentiments, top_keywords, rating_change
+        self, store, year_week, avg_rating, sentiments, top_keywords, rating_change
     ):
         """더미 AI 요약 텍스트 생성"""
         pos = sentiments.get("positive", 0)
@@ -439,18 +599,18 @@ class Command(BaseCommand):
         kw_text = ", ".join(kw["keyword"] for kw in top_keywords[:3])
 
         if rating_change > 0.5:
-            trend_text = "전월 대비 크게 상승한 평점으로 긍정적인 변화가 감지됩니다."
+            trend_text = "전주 대비 크게 상승한 평점으로 긍정적인 변화가 감지됩니다."
         elif rating_change > 0:
-            trend_text = "전월 대비 소폭 상승하여 안정적인 호평을 유지하고 있습니다."
+            trend_text = "전주 대비 소폭 상승하여 안정적인 호평을 유지하고 있습니다."
         elif rating_change < -0.5:
-            trend_text = "전월 대비 평점이 하락하여 개선이 필요한 시점입니다."
+            trend_text = "전주 대비 평점이 하락하여 개선이 필요한 시점입니다."
         elif rating_change < 0:
-            trend_text = "전월 대비 소폭 하락하였으나 큰 변동은 없습니다."
+            trend_text = "전주 대비 소폭 하락하였으나 큰 변동은 없습니다."
         else:
-            trend_text = "전월과 비슷한 수준을 유지하고 있습니다."
+            trend_text = "전주와 비슷한 수준을 유지하고 있습니다."
 
         return (
-            f"{store.name}의 {year_month} 리뷰 분석 결과, "
+            f"{store.name}의 {year_week} 리뷰 분석 결과, "
             f"평균 평점 {avg_rating}점으로 "
             f"긍정 리뷰가 {round(pos/total*100)}%, "
             f"부정 리뷰가 {round(neg/total*100)}%를 차지합니다. "

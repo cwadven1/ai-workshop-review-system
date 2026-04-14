@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewTime - 토큰 절약 전략</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 50px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header p { font-size: 1rem; color: #888; }
+
+  /* Before / After */
+  .comparison {
+    display: flex;
+    gap: 30px;
+    max-width: 960px;
+    margin: 0 auto 50px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .strategy-card {
+    flex: 1;
+    min-width: 300px;
+    max-width: 440px;
+    border-radius: 20px;
+    padding: 32px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .strategy-old { border-top: 4px solid #FA0050; }
+  .strategy-new { border-top: 4px solid #00B894; }
+  .strategy-card .card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+  .strategy-old .card-label { background: #FFF0F3; color: #FA0050; }
+  .strategy-new .card-label { background: #E8FFF5; color: #00B894; }
+  .strategy-card h2 { font-size: 1.2rem; margin-bottom: 16px; }
+  .strategy-old h2 { color: #FA0050; }
+  .strategy-new h2 { color: #00B894; }
+  .strategy-card table { width: 100%; border-collapse: collapse; }
+  .strategy-card th { background: #f8f8f8; font-size: 0.75rem; color: #888; font-weight: 600; padding: 8px 10px; text-align: left; }
+  .strategy-card td { font-size: 0.85rem; color: #555; padding: 9px 10px; border-bottom: 1px solid #f0f0f0; }
+  .strategy-card tr:last-child td { border-bottom: none; }
+
+  .token-bar-container { margin: 20px 0; }
+  .token-bar-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #666; }
+  .token-bar { height: 36px; border-radius: 18px; overflow: hidden; background: #f0f0f0; }
+  .token-bar-fill { height: 100%; border-radius: 18px; display: flex; align-items: center; justify-content: flex-end; padding-right: 14px; font-size: 0.85rem; font-weight: 700; color: #fff; }
+  .bar-old { background: #FA0050; width: 100%; }
+  .bar-new { background: #00B894; width: 4%; min-width: 36px; }
+
+  .savings-badge {
+    text-align: center;
+    margin: 0 auto 50px;
+    padding: 28px;
+    background: #fff;
+    border: 2px solid #FA0050;
+    border-radius: 20px;
+    max-width: 360px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .savings-badge .big-number { font-size: 4rem; font-weight: 800; color: #FA0050; line-height: 1; }
+  .savings-badge .big-label { font-size: 1.1rem; font-weight: 700; color: #FA0050; margin-bottom: 6px; }
+  .savings-badge p { color: #888; font-size: 0.95rem; margin-top: 6px; }
+
+  /* Role split */
+  .role-section-title { text-align: center; color: #222; margin: 40px 0 24px; font-size: 1.3rem; font-weight: 700; }
+  .role-split {
+    display: flex;
+    gap: 24px;
+    max-width: 900px;
+    margin: 0 auto 50px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .role-card {
+    flex: 1;
+    min-width: 280px;
+    max-width: 420px;
+    border-radius: 20px;
+    padding: 28px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .role-local { border-top: 4px solid #00B894; }
+  .role-llm   { border-top: 4px solid #FF9100; }
+  .role-card h3 { font-size: 1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .role-local h3 { color: #00B894; }
+  .role-llm h3   { color: #FF9100; }
+  .role-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .role-local .role-badge { background: #E8FFF5; color: #00B894; }
+  .role-llm .role-badge   { background: #FFF3E0; color: #FF9100; }
+  .role-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .role-list li { font-size: 0.85rem; color: #555; padding: 8px 12px; border-radius: 10px; display: flex; align-items: center; gap: 8px; }
+  .role-local .role-list li { background: #F2FFF9; }
+  .role-llm .role-list li   { background: #FFF8F0; }
+  .role-list li::before { content: "•"; font-weight: 700; }
+  .role-local .role-list li::before { color: #00B894; }
+  .role-llm .role-list li::before   { color: #FF9100; }
+
+  /* Code block */
+  .code-section { max-width: 900px; margin: 0 auto 40px; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .code-section h3 { font-size: 1rem; font-weight: 700; color: #222; margin-bottom: 16px; }
+  .code-block {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+    font-size: 0.82rem;
+    color: #e0e0e0;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .code-block .key { color: #79DCAA; }
+  .code-block .val { color: #FFB86C; }
+  .code-block .str { color: #F8F8F2; }
+  .code-block .comment { color: #6272a4; font-style: italic; }
+  .code-note { font-size: 0.82rem; color: #888; margin-top: 10px; font-style: italic; }
+
+  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+  .nav a:hover { background: #e0004a; }
+  .nav a.back { background: #ddd; color: #555; }
+  .nav a.back:hover { background: #ccc; }
+  .page-indicator { text-align: center; margin-top: 16px; font-size: 0.8rem; color: #bbb; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">REVIEWTIME</div>
+    <h1>하이브리드 전략으로 토큰 25배 절약</h1>
+    <p>kiwipiepy 로컬 전처리 + LLM 최소 호출</p>
+  </div>
+
+  <div class="comparison">
+    <div class="strategy-card strategy-old">
+      <div class="card-label">BEFORE</div>
+      <h2>LLM Only 방식</h2>
+      <div class="token-bar-container">
+        <div class="token-bar-label"><span>토큰 사용량</span><span>~5,000 토큰</span></div>
+        <div class="token-bar"><div class="token-bar-fill bar-old">5,000</div></div>
+      </div>
+      <table>
+        <thead><tr><th>항목</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>방식</td><td>리뷰 원문 100개 전체 LLM 전송</td></tr>
+          <tr><td>토큰 사용량</td><td>~5,000 토큰</td></tr>
+          <tr><td>비용</td><td>리뷰 건당 비용 발생</td></tr>
+          <tr><td>문제</td><td>양이 많을수록 비용 폭증</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="strategy-card strategy-new">
+      <div class="card-label">AFTER — ReviewTime</div>
+      <h2>하이브리드 방식</h2>
+      <div class="token-bar-container">
+        <div class="token-bar-label"><span>토큰 사용량</span><span>~200 토큰</span></div>
+        <div class="token-bar"><div class="token-bar-fill bar-new">200</div></div>
+      </div>
+      <table>
+        <thead><tr><th>항목</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>방식</td><td>로컬 통계 추출 → 압축 JSON만 전송</td></tr>
+          <tr><td>토큰 사용량</td><td>~200 토큰</td></tr>
+          <tr><td>비용</td><td>최소화</td></tr>
+          <tr><td>결과</td><td>정확도 동일, 비용 1/25</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="savings-badge">
+    <div class="big-number">25x</div>
+    <div class="big-label">토큰 절약</div>
+    <p>5,000 → 200 토큰<br><strong style="color:#FA0050;">96% 절감</strong></p>
+  </div>
+
+  <h2 class="role-section-title">역할 분담</h2>
+  <div class="role-split">
+    <div class="role-card role-local">
+      <h3>🌿 kiwipiepy <span class="role-badge">로컬, 비용 $0</span></h3>
+      <ul class="role-list">
+        <li>형태소 분석 (명사/형용사 추출)</li>
+        <li>키워드 빈도 집계</li>
+        <li>간단한 감성 판단 (룰 기반)</li>
+        <li>애매한 케이스 필터링</li>
+        <li>별점 트렌드 계산</li>
+        <li>비교 분석</li>
+      </ul>
+    </div>
+    <div class="role-card role-llm">
+      <h3>🤖 LLM (Claude) <span class="role-badge">API, 최소 토큰</span></h3>
+      <ul class="role-list">
+        <li>애매한 리뷰 감성 판단 (이중부정, 혼합감성)</li>
+        <li>키워드 통계 → 자연어 리포트 생성</li>
+        <li>W13~W16 기간 종합 AI 요약</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="code-section">
+    <h3>💡 LLM에 전달하는 압축 JSON 예시</h3>
+    <div class="code-block">
+      <span class="comment">// 원문 100개가 아니라 압축된 통계 JSON만 전달</span><br>
+      {<br>
+      &nbsp;&nbsp;<span class="key">"store"</span>: <span class="val">"파스타 팩토리"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"period"</span>: <span class="val">"2026-W13 ~ 2026-W16"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"avg_rating"</span>: <span class="val">4.0</span>,<br>
+      &nbsp;&nbsp;<span class="key">"sentiment"</span>: { <span class="key">"positive"</span>: <span class="val">65</span>, <span class="key">"neutral"</span>: <span class="val">25</span>, <span class="key">"negative"</span>: <span class="val">10</span> },<br>
+      &nbsp;&nbsp;<span class="key">"top_keywords"</span>: [<span class="val">"리뉴얼"</span>, <span class="val">"알덴테"</span>, <span class="val">"크림소스"</span>, <span class="val">"바삭한"</span>],<br>
+      &nbsp;&nbsp;<span class="key">"trend"</span>: <span class="val">"up"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"rating_change"</span>: <span class="val">"+2.0 (W13 대비 W16)"</span><br>
+      }
+    </div>
+    <p class="code-note">※ 실제 AI 요약: "파스타 팩토리의 2026-W13 ~ 2026-W16 리뷰를 종합 분석한 결과, 평균 평점 4.0점(긍정 65%, 부정 10%)을 기록했습니다. 기간 내 평점이 3.0점에서 5.0점으로 큰 폭 상승하며 빠른 개선세를 보이고 있습니다."</p>
+  </div>
+
+  <div class="nav">
+    <a href="02-pipeline.html" class="back">&larr; 이전</a>
+    <a href="04-analysis-cycle.html">다음: 분석 주기 &rarr;</a>
+  </div>
+  <div class="page-indicator">3 / 6</div>
+</body>
+</html>

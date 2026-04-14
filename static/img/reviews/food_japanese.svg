@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#F8F0E8"/>
+  <defs>
+    <linearGradient id="plateGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F5F5"/>
+      <stop offset="100%" stop-color="#E0E0E0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 접시 그림자 -->
+  <ellipse cx="202" cy="245" rx="155" ry="18" fill="#00000018"/>
+  <!-- 접시 -->
+  <ellipse cx="200" cy="230" rx="155" ry="18" fill="#D0D0D0"/>
+  <ellipse cx="200" cy="220" rx="155" ry="18" fill="url(#plateGrad)"/>
+  <rect x="45" y="160" width="310" height="60" rx="10" fill="#FAFAFA"/>
+  <ellipse cx="200" cy="160" rx="155" ry="18" fill="#F5F5F5"/>
+
+  <!-- 초밥 1 (참치) -->
+  <ellipse cx="105" cy="158" rx="32" ry="10" fill="#D0C8A0"/>
+  <rect x="73" y="130" width="64" height="28" rx="6" fill="#F5F0DC"/>
+  <ellipse cx="105" cy="130" rx="32" ry="10" fill="#E8C87A"/>
+  <!-- 참치 네타 -->
+  <ellipse cx="105" cy="126" rx="28" ry="9" fill="#E53935"/>
+  <ellipse cx="105" cy="124" rx="25" ry="7" fill="#EF5350"/>
+
+  <!-- 초밥 2 (연어) -->
+  <ellipse cx="200" cy="158" rx="32" ry="10" fill="#D0C8A0"/>
+  <rect x="168" y="130" width="64" height="28" rx="6" fill="#F5F0DC"/>
+  <ellipse cx="200" cy="130" rx="32" ry="10" fill="#E8C87A"/>
+  <!-- 연어 네타 -->
+  <ellipse cx="200" cy="126" rx="28" ry="9" fill="#FF8C42"/>
+  <ellipse cx="200" cy="124" rx="25" ry="7" fill="#FFA563"/>
+  <!-- 연어 줄무늬 -->
+  <line x1="182" y1="122" x2="188" y2="128" stroke="#FF6B1A" stroke-width="1.5" opacity="0.6"/>
+  <line x1="195" y1="120" x2="201" y2="126" stroke="#FF6B1A" stroke-width="1.5" opacity="0.6"/>
+  <line x1="208" y1="122" x2="214" y2="128" stroke="#FF6B1A" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- 초밥 3 (새우) -->
+  <ellipse cx="295" cy="158" rx="32" ry="10" fill="#D0C8A0"/>
+  <rect x="263" y="130" width="64" height="28" rx="6" fill="#F5F0DC"/>
+  <ellipse cx="295" cy="130" rx="32" ry="10" fill="#E8C87A"/>
+  <!-- 새우 네타 -->
+  <ellipse cx="295" cy="126" rx="28" ry="9" fill="#FF7043"/>
+  <path d="M270 125 Q285 118 295 122 Q305 118 320 125" fill="none" stroke="#FF8A65" stroke-width="2"/>
+
+  <!-- 와사비 (초록 방울) -->
+  <ellipse cx="155" cy="195" rx="12" ry="8" fill="#43A047"/>
+  <ellipse cx="155" cy="192" rx="10" ry="6" fill="#66BB6A"/>
+
+  <!-- 생강 (핑크) -->
+  <path d="M235 185 Q250 180 260 190 Q255 200 240 200 Q228 198 228 190Z" fill="#FFB3BA"/>
+  <path d="M238 183 Q252 178 258 188" fill="none" stroke="#FF8A9A" stroke-width="1"/>
+
+  <!-- 간장 작은 접시 -->
+  <ellipse cx="345" cy="240" rx="30" ry="8" fill="#00000010"/>
+  <ellipse cx="345" cy="235" rx="30" ry="8" fill="#E0C9A0"/>
+  <ellipse cx="345" cy="230" rx="27" ry="7" fill="#5D4037"/>
+  <ellipse cx="345" cy="228" rx="22" ry="5" fill="#3E2723"/>
+
+  <!-- 젓가락 받침 -->
+  <rect x="32" y="252" width="55" height="8" rx="4" fill="#D4A853"/>
+  <!-- 젓가락 -->
+  <rect x="38" y="220" width="3" height="60" rx="1.5" fill="#8B6914" transform="rotate(5 38 220)"/>
+  <rect x="46" y="220" width="3" height="60" rx="1.5" fill="#8B6914" transform="rotate(5 46 220)"/>
+
+  <!-- 라벨 -->
+  <rect x="10" y="10" width="80" height="28" rx="14" fill="#C62828"/>
+  <text x="50" y="29" font-family="sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">오마카세</text>
+</svg>

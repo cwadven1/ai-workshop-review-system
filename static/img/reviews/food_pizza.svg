@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#FFF8F2"/>
+  <defs>
+    <radialGradient id="pizzaBase" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#FFCC80"/>
+      <stop offset="100%" stop-color="#D4881A"/>
+    </radialGradient>
+    <radialGradient id="crustGrad" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#F5DEB3"/>
+      <stop offset="100%" stop-color="#C8830A"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 박스 그림자 -->
+  <rect x="32" y="52" width="338" height="238" rx="10" fill="#00000015"/>
+  <!-- 피자 박스 -->
+  <rect x="28" y="48" width="338" height="238" rx="10" fill="#E8D5B5"/>
+  <rect x="28" y="48" width="338" height="28" rx="10" fill="#D4B896"/>
+  <text x="197" y="68" font-family="sans-serif" font-size="13" fill="#6D4C41" text-anchor="middle" font-weight="bold">PIZZA</text>
+
+  <!-- 피자 (박스 안) -->
+  <!-- 크러스트 -->
+  <circle cx="200" cy="178" r="118" fill="url(#crustGrad)"/>
+  <!-- 도우 -->
+  <circle cx="200" cy="178" r="108" fill="url(#pizzaBase)"/>
+  <!-- 토마토소스 -->
+  <circle cx="200" cy="178" r="98" fill="#E53935" opacity="0.85"/>
+  <!-- 치즈 -->
+  <circle cx="200" cy="178" r="90" fill="#FFFDE7"/>
+
+  <!-- 치즈 녹은 패턴 -->
+  <path d="M150 140 Q170 130 190 145 Q210 130 230 140 Q250 155 245 175 Q240 195 220 200 Q200 205 180 200 Q158 193 150 175 Q143 158 150 140Z" fill="#FFF9C4" opacity="0.7"/>
+
+  <!-- 토마토소스 얼룩 -->
+  <circle cx="175" cy="155" r="15" fill="#EF5350" opacity="0.5"/>
+  <circle cx="225" cy="160" r="12" fill="#E53935" opacity="0.4"/>
+  <circle cx="195" cy="195" r="18" fill="#EF5350" opacity="0.45"/>
+  <circle cx="215" cy="150" r="10" fill="#E53935" opacity="0.35"/>
+
+  <!-- 페퍼로니 -->
+  <circle cx="172" cy="152" r="14" fill="#B71C1C"/>
+  <circle cx="172" cy="152" r="11" fill="#C62828"/>
+  <circle cx="169" cy="149" r="3" fill="#D32F2F" opacity="0.6"/>
+
+  <circle cx="228" cy="148" r="14" fill="#B71C1C"/>
+  <circle cx="228" cy="148" r="11" fill="#C62828"/>
+  <circle cx="225" cy="145" r="3" fill="#D32F2F" opacity="0.6"/>
+
+  <circle cx="198" cy="192" r="14" fill="#B71C1C"/>
+  <circle cx="198" cy="192" r="11" fill="#C62828"/>
+  <circle cx="195" cy="189" r="3" fill="#D32F2F" opacity="0.6"/>
+
+  <circle cx="162" cy="180" r="12" fill="#C62828"/>
+  <circle cx="162" cy="180" r="9" fill="#D32F2F"/>
+
+  <circle cx="235" cy="180" r="12" fill="#C62828"/>
+  <circle cx="235" cy="180" r="9" fill="#D32F2F"/>
+
+  <!-- 버섯 -->
+  <path d="M205 168 Q215 160 225 168 Q222 178 205 178Z" fill="#8D6E63"/>
+  <path d="M205 168 Q215 162 225 168" fill="none" stroke="#6D4C41" stroke-width="1"/>
+
+  <!-- 파프리카 -->
+  <rect x="178" y="173" width="14" height="8" rx="2" fill="#4CAF50" transform="rotate(-15 178 173)"/>
+  <rect x="215" y="165" width="14" height="8" rx="2" fill="#F44336" transform="rotate(20 215 165)"/>
+
+  <!-- 올리브 -->
+  <ellipse cx="190" cy="162" rx="5" ry="7" fill="#212121"/>
+  <ellipse cx="190" cy="159" rx="3" ry="2" fill="#424242"/>
+
+  <!-- 바질 잎 -->
+  <path d="M210 188 Q218 182 220 190 Q215 196 208 192Z" fill="#2E7D32"/>
+  <path d="M180 160 Q188 155 189 163 Q184 167 178 164Z" fill="#388E3C"/>
+
+  <!-- 크러스트 텍스처 -->
+  <circle cx="108" cy="148" r="3" fill="#C8830A" opacity="0.4"/>
+  <circle cx="122" cy="120" r="2.5" fill="#D4981A" opacity="0.4"/>
+  <circle cx="152" cy="100" r="3" fill="#C8830A" opacity="0.35"/>
+  <circle cx="248" cy="100" r="3" fill="#C8830A" opacity="0.35"/>
+  <circle cx="280" cy="122" r="2.5" fill="#D4981A" opacity="0.4"/>
+  <circle cx="292" cy="152" r="3" fill="#C8830A" opacity="0.4"/>
+  <circle cx="288" cy="210" r="2.5" fill="#C8830A" opacity="0.35"/>
+  <circle cx="112" cy="210" r="3" fill="#D4981A" opacity="0.4"/>
+
+  <!-- 라벨 -->
+  <rect x="10" y="10" width="90" height="28" rx="14" fill="#D84315"/>
+  <text x="55" y="29" font-family="sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">마르게리타</text>
+</svg>

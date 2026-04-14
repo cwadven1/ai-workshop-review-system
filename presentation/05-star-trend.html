@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewTime - 별점 트렌드 시각화</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header p { font-size: 1rem; color: #888; }
+
+  /* Stock mapping table */
+  .stock-table-section {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .stock-table-section h2 { font-size: 1.1rem; font-weight: 700; color: #222; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f8f8; font-size: 0.78rem; color: #888; font-weight: 600; padding: 9px 14px; text-align: left; }
+  td { font-size: 0.85rem; color: #555; padding: 9px 14px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: none; }
+  .stock-term { font-weight: 700; color: #6C5CE7; }
+  .review-term { font-weight: 600; color: #FA0050; }
+
+  /* Chart */
+  .chart-section {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    padding: 30px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border-radius: 20px;
+  }
+  .chart-section h2 { color: #222; font-size: 1.2rem; margin-bottom: 24px; text-align: center; }
+  .line-chart-wrap { position: relative; width: 100%; height: 320px; margin-bottom: 10px; }
+  .line-chart-wrap svg { width: 100%; height: 100%; }
+
+  /* Weekly cards */
+  .weekly-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    max-width: 900px;
+    margin: 0 auto 40px;
+  }
+  .week-card {
+    text-align: center;
+    padding: 18px 8px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    transition: transform 0.2s;
+  }
+  .week-card:hover { transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+  .week-label { font-size: 0.75rem; color: #888; margin-bottom: 6px; font-weight: 600; }
+  .week-score { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; }
+  .week-card.up .week-score { color: #00B894; }
+  .week-card.first .week-score { color: #888; }
+  .week-delta { font-size: 1rem; font-weight: 700; }
+  .week-card.up .week-delta { color: #00B894; }
+  .week-card.first .week-delta { color: #999; }
+  .week-reviews { font-size: 0.68rem; color: #777; margin-top: 6px; }
+  .week-confidence { display: inline-block; font-size: 0.6rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; margin-top: 5px; }
+  .conf-high { background: #E8FFF5; color: #00B894; }
+  .conf-low  { background: #FFF3E0; color: #FF9100; }
+
+  /* AI Summary */
+  .summary-section { max-width: 900px; margin: 0 auto 40px; }
+  .summary-section > h2 { color: #222; font-size: 1.2rem; margin-bottom: 16px; text-align: center; }
+  .summary-cards { display: flex; flex-direction: column; gap: 12px; }
+  .summary-card { display: flex; align-items: flex-start; gap: 14px; padding: 16px 20px; border-radius: 14px; }
+  .summary-card.card-up   { background: #fff; border: 1px solid #B2DFDB; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
+  .summary-card.card-first { background: #fff; border: 1px solid #e0e0e0; box-shadow: 0 1px 6px rgba(0,0,0,0.04); }
+  .summary-week-tag { flex-shrink: 0; padding: 6px 14px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; min-width: 55px; text-align: center; }
+  .card-up .summary-week-tag   { background: #E8FFF5; color: #00B894; }
+  .card-first .summary-week-tag { background: #f5f5f5; color: #999; }
+  .summary-body { flex: 1; }
+  .summary-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+  .card-up .summary-title   { color: #00B894; }
+  .card-first .summary-title { color: #888; }
+  .summary-desc { font-size: 0.85rem; color: #666; line-height: 1.5; }
+  .summary-delta { font-size: 0.78rem; margin-top: 4px; font-weight: 600; }
+  .card-up .summary-delta { color: #00B894; }
+  .card-first .summary-delta { color: #999; }
+
+  /* Category bars */
+  .category-section { max-width: 800px; margin: 0 auto 40px; }
+  .category-section h2 { color: #222; font-size: 1.2rem; margin-bottom: 20px; text-align: center; }
+  .cat-bars { display: flex; flex-direction: column; gap: 14px; }
+  .cat-row { display: flex; align-items: center; gap: 14px; }
+  .cat-name { width: 70px; text-align: right; font-size: 0.9rem; font-weight: 600; color: #555; }
+  .cat-bar-track { flex: 1; height: 36px; background: #eee; border-radius: 18px; overflow: hidden; }
+  .cat-bar-fill { height: 100%; border-radius: 18px; display: flex; align-items: center; padding-left: 14px; font-size: 0.85rem; font-weight: 700; color: #fff; transition: width 0.8s ease; }
+  .cat-change { width: 90px; font-size: 0.85rem; font-weight: 700; text-align: center; padding: 6px 8px; border-radius: 8px; line-height: 1.3; }
+  .change-up   { color: #00B894; background: #E8FFF5; }
+  .change-down { color: #FA0050; background: #FFF0F3; }
+  .change-same { color: #888; background: #f5f5f5; }
+  .cat-prev { display: block; font-size: 0.65rem; font-weight: 400; opacity: 0.7; margin-top: 1px; }
+
+  /* Interaction card */
+  .interaction-section { max-width: 900px; margin: 0 auto 40px; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .interaction-section h2 { font-size: 1.1rem; font-weight: 700; color: #222; margin-bottom: 16px; }
+
+  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+  .nav a:hover { background: #e0004a; }
+  .nav a.back { background: #ddd; color: #555; }
+  .nav a.back:hover { background: #ccc; }
+  .page-indicator { text-align: center; margin-top: 16px; font-size: 0.8rem; color: #bbb; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">REVIEWTIME</div>
+    <h1>별점을 주식 차트처럼</h1>
+    <p>시가/종가/고가/저가로 표현하는 리뷰 트렌드</p>
+  </div>
+
+  <!-- Stock mapping table -->
+  <div class="stock-table-section">
+    <h2>📈 주식형 시각화 개념 매핑</h2>
+    <table>
+      <thead><tr><th>주식 용어</th><th>리뷰 적용</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td class="stock-term">시가</td><td class="review-term">기간 첫 주 평균 별점</td><td>기간 시작 시점 평가</td></tr>
+        <tr><td class="stock-term">종가</td><td class="review-term">최근 주 평균 별점</td><td>현재 평가</td></tr>
+        <tr><td class="stock-term">고가</td><td class="review-term">기간 내 최고 주 평균</td><td>최고 컨디션</td></tr>
+        <tr><td class="stock-term">저가</td><td class="review-term">기간 내 최저 주 평균</td><td>최저 컨디션</td></tr>
+        <tr><td class="stock-term">거래량</td><td class="review-term">리뷰 수</td><td>신뢰도 지표</td></tr>
+        <tr><td class="stock-term">이동평균선</td><td class="review-term">4주 이동평균</td><td>단기 노이즈 제거한 추세</td></tr>
+        <tr><td class="stock-term">변동률</td><td class="review-term">전주 대비 별점 변화%</td><td>개선/악화 속도</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Main line chart -->
+  <div class="chart-section">
+    <h2>파스타 팩토리 — 별점 트렌드 (W13~W16)</h2>
+    <div class="line-chart-wrap">
+      <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg">
+        <!-- Grid lines -->
+        <line x1="70" y1="30" x2="750" y2="30"  stroke="#f0f0f0" stroke-width="1"/>
+        <line x1="70" y1="84" x2="750" y2="84"  stroke="#f0f0f0" stroke-width="1"/>
+        <line x1="70" y1="138" x2="750" y2="138" stroke="#f0f0f0" stroke-width="1"/>
+        <line x1="70" y1="192" x2="750" y2="192" stroke="#f0f0f0" stroke-width="1"/>
+        <line x1="70" y1="246" x2="750" y2="246" stroke="#f0f0f0" stroke-width="1"/>
+
+        <!-- Y axis labels (left: star rating) -->
+        <text x="58" y="34"  text-anchor="end" font-size="11" fill="#aaa">5.0</text>
+        <text x="58" y="88"  text-anchor="end" font-size="11" fill="#aaa">4.0</text>
+        <text x="58" y="142" text-anchor="end" font-size="11" fill="#aaa">3.0</text>
+        <text x="58" y="196" text-anchor="end" font-size="11" fill="#aaa">2.0</text>
+        <text x="58" y="250" text-anchor="end" font-size="11" fill="#aaa">1.0</text>
+        <text x="30" y="150" text-anchor="middle" font-size="11" fill="#aaa" transform="rotate(-90 30 150)">별점</text>
+
+        <!-- Y axis labels (right: review count) -->
+        <text x="762" y="34"  font-size="11" fill="#bbb">5</text>
+        <text x="762" y="88"  font-size="11" fill="#bbb">4</text>
+        <text x="762" y="142" font-size="11" fill="#bbb">3</text>
+        <text x="762" y="196" font-size="11" fill="#bbb">2</text>
+        <text x="762" y="250" font-size="11" fill="#bbb">1</text>
+        <text x="790" y="150" text-anchor="middle" font-size="11" fill="#bbb" transform="rotate(90 790 150)">리뷰 수</text>
+
+        <!-- X axis -->
+        <line x1="70" y1="246" x2="750" y2="246" stroke="#e0e0e0" stroke-width="1.5"/>
+
+        <!-- X axis labels -->
+        <!-- W13=190, W14=330, W15=470, W16=610 -->
+        <text x="190" y="268" text-anchor="middle" font-size="12" fill="#888" font-weight="600">W13</text>
+        <text x="330" y="268" text-anchor="middle" font-size="12" fill="#888" font-weight="600">W14</text>
+        <text x="470" y="268" text-anchor="middle" font-size="12" fill="#888" font-weight="600">W15</text>
+        <text x="610" y="268" text-anchor="middle" font-size="12" fill="#888" font-weight="600">W16</text>
+        <text x="190" y="282" text-anchor="middle" font-size="10" fill="#bbb">3/30~4/5</text>
+        <text x="330" y="282" text-anchor="middle" font-size="10" fill="#bbb">4/6~4/12</text>
+        <text x="470" y="282" text-anchor="middle" font-size="10" fill="#bbb">4/13~4/19</text>
+        <text x="610" y="282" text-anchor="middle" font-size="10" fill="#bbb">4/20~4/26</text>
+
+        <!-- Volume bars (review count, mapped: 1=54px height, aligned to bottom=246) -->
+        <!-- W13: 3건 → h=54*3/5=32.4, W14: 2건→21.6, W15: 4건→43.2, W16: 3건→32.4 -->
+        <rect x="165" y="214" width="50" height="32" rx="4" fill="#FA0050" opacity="0.12"/>
+        <rect x="305" y="225" width="50" height="21" rx="4" fill="#FA0050" opacity="0.12"/>
+        <rect x="445" y="203" width="50" height="43" rx="4" fill="#FA0050" opacity="0.12"/>
+        <rect x="585" y="214" width="50" height="32" rx="4" fill="#FA0050" opacity="0.12"/>
+
+        <!-- 4주 이동평균 점선 (단순화: W13~W16 평균 = (3+3.5+4.5+5)/4=4.0 → y=88+54*(5-4)=88+54=142)
+             4주 이동평균선: W13부터 W16까지 평균값들
+             이동평균(W13)=3.0, (W14)=(3+3.5)/2=3.25, (W15)=(3+3.5+4.5)/3=3.67, (W16)=(3+3.5+4.5+5)/4=4.0
+             y = 246 - (val-1)/4 * 216
+             W13: y=246-2*54=138, W14: y=246-2.25*54=124, W15: y=246-2.67*54=103, W16: y=246-3*54=84 -->
+        <polyline points="190,138 330,124 470,103 610,84"
+          fill="none" stroke="#6C5CE7" stroke-width="1.8"
+          stroke-dasharray="5,4" opacity="0.6"/>
+
+        <!-- Main line -->
+        <!-- y = 246 - (rating - 1) * 54  (scale: 1→246, 5→30, range=216/4=54 per point) -->
+        <!-- W13: 3.0 → y=246-2*54=138 -->
+        <!-- W14: 3.5 → y=246-2.5*54=111 -->
+        <!-- W15: 4.5 → y=246-3.5*54=57 -->
+        <!-- W16: 5.0 → y=246-4*54=30 -->
+        <polyline points="190,138 330,111 470,57 610,30"
+          fill="none" stroke="#FA0050" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+
+        <!-- Area fill -->
+        <polygon points="190,138 330,111 470,57 610,30 610,246 190,246"
+          fill="url(#redGrad)" opacity="0.08"/>
+        <defs>
+          <linearGradient id="redGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#FA0050"/>
+            <stop offset="100%" stop-color="#FA0050" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Data point badges (review count) -->
+        <circle cx="190" cy="138" r="11" fill="#FA0050"/>
+        <text x="190" y="142" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">3</text>
+        <circle cx="330" cy="111" r="11" fill="#FA0050"/>
+        <text x="330" y="115" text-anchor="middle" font-size="11" font-weight="800" fill="#fff">2</text>
+        <circle cx="470" cy="57"  r="11" fill="#FA0050"/>
+        <text x="470" y="61"  text-anchor="middle" font-size="11" font-weight="800" fill="#fff">4</text>
+        <circle cx="610" cy="30"  r="11" fill="#FA0050"/>
+        <text x="610" y="34"  text-anchor="middle" font-size="11" font-weight="800" fill="#fff">3</text>
+
+        <!-- Data labels -->
+        <text x="190" cy="138" y="125" text-anchor="middle" font-size="13" font-weight="700" fill="#FA0050">3.0</text>
+        <text x="330" y="98"  text-anchor="middle" font-size="13" font-weight="700" fill="#FA0050">3.5</text>
+        <text x="470" y="44"  text-anchor="middle" font-size="13" font-weight="700" fill="#FA0050">4.5</text>
+        <text x="610" y="17"  text-anchor="middle" font-size="13" font-weight="700" fill="#FA0050">5.0</text>
+
+        <!-- Legend -->
+        <line x1="520" y1="287" x2="545" y2="287" stroke="#FA0050" stroke-width="3"/>
+        <text x="549" y="291" font-size="11" fill="#888">평점 추이</text>
+        <line x1="620" y1="287" x2="645" y2="287" stroke="#6C5CE7" stroke-width="1.8" stroke-dasharray="5,4"/>
+        <text x="649" y="291" font-size="11" fill="#888">4주 이동평균</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Weekly cards -->
+  <div class="weekly-cards">
+    <div class="week-card first">
+      <div class="week-label">W13 · 3/30~4/5</div>
+      <div class="week-score">3.0</div>
+      <div class="week-delta">— 기준</div>
+      <div class="week-reviews">리뷰 3건</div>
+      <span class="week-confidence conf-low">낮음</span>
+    </div>
+    <div class="week-card up">
+      <div class="week-label">W14 · 4/6~4/12</div>
+      <div class="week-score">3.5</div>
+      <div class="week-delta">+0.5 ↑</div>
+      <div class="week-reviews">리뷰 2건</div>
+      <span class="week-confidence conf-low">낮음</span>
+    </div>
+    <div class="week-card up">
+      <div class="week-label">W15 · 4/13~4/19</div>
+      <div class="week-score">4.5</div>
+      <div class="week-delta">+1.0 ↑↑</div>
+      <div class="week-reviews">리뷰 4건</div>
+      <span class="week-confidence conf-high">높음</span>
+    </div>
+    <div class="week-card up">
+      <div class="week-label">W16 · 4/20~4/26</div>
+      <div class="week-score">5.0</div>
+      <div class="week-delta">+0.5 ↑</div>
+      <div class="week-reviews">리뷰 3건</div>
+      <span class="week-confidence conf-high">높음</span>
+    </div>
+  </div>
+
+  <!-- AI Summary (역순 W16 → W13) -->
+  <div class="summary-section">
+    <h2>🤖 AI 주별 요약</h2>
+    <div class="summary-cards">
+      <div class="summary-card card-up">
+        <div class="summary-week-tag">W16</div>
+        <div class="summary-body">
+          <div class="summary-title">리뉴얼 이후 최고 평점 달성</div>
+          <div class="summary-desc">바삭한 식감과 알덴테 파스타에 대한 극찬이 이어지고 있으며, 리뉴얼 이후 음식 품질에 대한 호평이 집중되고 있습니다.</div>
+          <div class="summary-delta">★ 5.0 · 전주 대비 +0.5점 · 리뷰 3건</div>
+        </div>
+      </div>
+      <div class="summary-card card-up">
+        <div class="summary-week-tag">W15</div>
+        <div class="summary-body">
+          <div class="summary-title">리뉴얼 효과 본격화</div>
+          <div class="summary-desc">"리뉴얼", "맛집", "크림소스" 키워드가 급부상하며 가게 개선 효과가 데이터로 확인되기 시작했습니다.</div>
+          <div class="summary-delta">★ 4.5 · 전주 대비 +1.0점 · 리뷰 4건</div>
+        </div>
+      </div>
+      <div class="summary-card card-up">
+        <div class="summary-week-tag">W14</div>
+        <div class="summary-body">
+          <div class="summary-title">소폭 상승, 회복세 감지</div>
+          <div class="summary-desc">여전히 "보통", "무난한" 키워드가 주를 이루지만, 직전 주 대비 미미한 상승세가 감지되었습니다.</div>
+          <div class="summary-delta">★ 3.5 · 전주 대비 +0.5점 · 리뷰 2건</div>
+        </div>
+      </div>
+      <div class="summary-card card-first">
+        <div class="summary-week-tag">W13</div>
+        <div class="summary-body">
+          <div class="summary-title">기준 주차 — 평범한 평가</div>
+          <div class="summary-desc">"보통", "무난한", "평범한" 키워드 중심으로 특별한 장단점이 없는 평범한 평가를 받았습니다.</div>
+          <div class="summary-delta">★ 3.0 · 기준 주차 · 리뷰 3건</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category bars -->
+  <div class="category-section">
+    <h2>📊 카테고리별 평점 분석</h2>
+    <div class="cat-bars">
+      <div class="cat-row">
+        <div class="cat-name">음식</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:84%; background:#FA0050;">4.2</div></div>
+        <div class="cat-change change-up">▲ +0.3<span class="cat-prev">전주 3.9</span></div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-name">배달</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:62%; background:#FF9100;">3.1</div></div>
+        <div class="cat-change change-down">▼ -0.5<span class="cat-prev">전주 3.6</span></div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-name">서비스</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:90%; background:#00B894;">4.5</div></div>
+        <div class="cat-change change-same">→ 0.0<span class="cat-prev">전주 4.5</span></div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-name">가격</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:76%; background:#6C5CE7;">3.8</div></div>
+        <div class="cat-change change-up">▲ +0.1<span class="cat-prev">전주 3.7</span></div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-name">위생</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:88%; background:#00B894;">4.4</div></div>
+        <div class="cat-change change-up">▲ +0.2<span class="cat-prev">전주 4.2</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interaction -->
+  <div class="interaction-section">
+    <h2>🖱️ 인터랙션 기능</h2>
+    <table>
+      <thead><tr><th>기능</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>키워드 버튼 클릭</td><td>해당 키워드 포함 리뷰만 필터링</td></tr>
+        <tr><td>재클릭</td><td>필터 해제</td></tr>
+        <tr><td>더보기 토글</td><td>주차별 전체 리뷰 접기/펼치기</td></tr>
+        <tr><td>리뷰 검색</td><td>전문 텍스트 검색 → 주차별 그룹 표시</td></tr>
+        <tr><td>키워드-리뷰 연동</td><td>키워드 선택 상태에서 더보기 시 필터 유지</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nav">
+    <a href="04-analysis-cycle.html" class="back">&larr; 이전</a>
+    <a href="06-stakeholder.html">다음: 이해관계자 가치 &rarr;</a>
+  </div>
+  <div class="page-indicator">5 / 6</div>
+</body>
+</html>

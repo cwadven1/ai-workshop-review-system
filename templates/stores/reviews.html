@@ -1,75 +1,93 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}{{ store.name }} 리뷰 분석 - 요기요{% endblock %}
+{% block title %}{{ store.name }} - 요기요 리뷰 분석{% endblock %}
 
 {% block content %}
 
 <!-- ── Hero 이미지 영역 ── -->
-<div class="store-hero">
-    <i class="bi bi-shop-window"></i>
+<div class="store-hero{% if store.image_url %} store-hero-img{% endif %}"
+     {% if store.image_url %}style="background-image: url('{% static store.image_url %}');"{% endif %}>
+    {% if not store.image_url %}<i class="bi bi-shop-window"></i>{% endif %}
+    <!-- 뒤로가기 버튼 -->
     <a href="javascript:history.back()" class="hero-back-btn" aria-label="뒤로가기">
         <i class="bi bi-arrow-left"></i>
     </a>
+    <!-- 우측 액션 버튼 -->
+    <div class="hero-action-btns">
+        <button class="hero-action-btn" onclick="shareStore()" aria-label="공유">
+            <i class="bi bi-share"></i>
+        </button>
+        <button class="hero-action-btn" id="likeBtn" aria-label="찜">
+            <i class="bi bi-heart"></i>
+        </button>
+    </div>
 </div>
 
-<!-- ── 가게 정보 카드 ── -->
+<!-- ── 가게 헤더 ── -->
 <div class="store-detail-header">
     <div class="store-detail-name">{{ store.name }}</div>
-    <div class="store-detail-category">{{ store.get_category_display }}</div>
-    <div class="store-detail-rating-row">
-        <span class="store-detail-rating-num">{{ store.avg_rating }}</span>
-        <span class="store-detail-stars">
-            {% for i in "12345" %}
-                {% if forloop.counter <= store.avg_rating %}
-                    <i class="bi bi-star-fill"></i>
-                {% elif forloop.counter <= store.avg_rating|add:"0.5" %}
-                    <i class="bi bi-star-half"></i>
-                {% else %}
-                    <i class="bi bi-star"></i>
-                {% endif %}
-            {% endfor %}
-        </span>
-        <span class="store-detail-review-count">리뷰 {{ store.total_review_count }}건</span>
+    <div class="store-detail-info-row">
+        <a href="/?category={{ store.category }}" class="store-detail-category-link">{{ store.get_category_display }}</a>
+        <i class="bi bi-chevron-right" style="font-size:10px; color:var(--yg-muted);"></i>
     </div>
-    <a href="{% url 'store-timeline' store.pk %}" class="btn-yg-review">
-        <i class="bi bi-chat-left-text me-1"></i>리뷰 보기
+
+    <!-- 리뷰 뱃지 행 -->
+    <a href="{% url 'store-timeline' store.pk %}" class="review-badge-row">
+        <div class="review-badge-left">
+            <span class="review-badge-star"><i class="bi bi-star-fill"></i> {{ store.avg_rating }}</span>
+            <span class="review-badge-sep-dot">·</span>
+            <span class="review-badge-count">리뷰 {{ store.total_review_count }}개</span>
+        </div>
+        <div class="review-badge-right">
+            리뷰 전체 보기 <i class="bi bi-chevron-right"></i>
+        </div>
     </a>
 </div>
 
-<!-- ── 월별 평점 트렌드 차트 ── -->
+<!-- ── 주차별 별점 트렌드 차트 ── -->
 <div class="detail-section">
-    <div class="detail-section-title"><i class="bi bi-graph-up me-1"></i>월별 평점 트렌드</div>
-    <div class="d-flex flex-wrap gap-1 mb-3">
-        <small class="text-muted d-flex align-items-center gap-1">
-            <span style="display:inline-block;width:10px;height:10px;background:#F44336;border-radius:2px;"></span>~2점
-            <span style="display:inline-block;width:10px;height:10px;background:#FF9800;border-radius:2px;margin-left:4px;"></span>~3점
-            <span style="display:inline-block;width:10px;height:10px;background:#FFC107;border-radius:2px;margin-left:4px;"></span>~3.5점
-            <span style="display:inline-block;width:10px;height:10px;background:#8BC34A;border-radius:2px;margin-left:4px;"></span>~4점
-            <span style="display:inline-block;width:10px;height:10px;background:#1B9E3E;border-radius:2px;margin-left:4px;"></span>4.5점+
-            <span style="display:inline-block;width:16px;height:2px;background:#6c757d;border-radius:1px;margin-left:8px;vertical-align:middle;"></span>
-            <span style="display:inline-block;width:6px;height:6px;background:#6c757d;border-radius:50%;margin-left:-2px;vertical-align:middle;"></span> 리뷰수
-        </small>
-    </div>
-    <div style="height: 280px; position: relative;">
-        <canvas id="ratingTrendChart"></canvas>
+    <div class="detail-section-title"><i class="bi bi-graph-up me-1"></i>주차별 별점 트렌드</div>
+    <div style="height: 220px; position: relative;">
+        <div id="ratingTrendChart" style="width:100%;height:100%;"></div>
     </div>
 </div>
 
-<!-- ── 메뉴 섹션 ── -->
+<!-- ── 메뉴 ── -->
 {% if menus %}
-<div class="detail-section">
-    <div class="detail-section-title"><i class="bi bi-menu-button-wide me-1"></i>메뉴</div>
-    {% for menu in menus %}
-    <div class="menu-item">
-        <div class="menu-thumb"><i class="bi bi-image"></i></div>
-        <div class="menu-info">
-            <div class="menu-name">{{ menu.name }}</div>
-            {% if menu.is_popular %}<span class="menu-popular-badge">인기</span>{% endif %}
-            <div class="menu-price">{{ menu.price|floatformat:0 }}원</div>
-            {% if menu.description %}<div class="menu-desc">{{ menu.description }}</div>{% endif %}
+<!-- 메뉴 탭 바 -->
+<div class="menu-tab-bar">
+    <button class="menu-tab active">대표메뉴</button>
+    <button class="menu-tab">인기</button>
+</div>
+
+<!-- 메뉴 그리드 -->
+<div class="detail-section" style="padding:0; margin-bottom:0;">
+    <div class="detail-section-title" style="padding:16px 16px 10px;">대표메뉴</div>
+    <div class="menu-grid">
+        {% for menu in menus %}
+        <div class="menu-grid-item">
+            <div class="menu-grid-thumb">
+                <i class="bi bi-image"></i>
+            </div>
+            {% if menu.is_popular %}
+            <span class="menu-grid-popular">베스트</span>
+            {% endif %}
+            <div class="menu-grid-name">{{ menu.name }}</div>
+            <div class="menu-grid-price">{{ menu.price|floatformat:0 }}원</div>
+            {% if menu.description %}
+            <div class="menu-desc">{{ menu.description }}</div>
+            {% endif %}
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-menu-button-wide"></i>
+    <h4>메뉴 정보가 없습니다</h4>
+    <p>메뉴 정보를 준비 중입니다.</p>
 </div>
 {% endif %}
 
@@ -78,22 +96,56 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // 트렌드 차트 초기화
+
+    // ── 트렌드 차트 초기화 ──
     fetch("{% url 'trends-data' store.pk %}")
         .then(function (response) { return response.json(); })
         .then(function (data) { initTrendChart('ratingTrendChart', data); });
 
-    // 최근 본 가게 localStorage 저장
-    (function () {
-        const KEY = 'reviewtime_recent_stores';
-        const storeId = {{ store.pk }};
-        let ids;
-        try { ids = JSON.parse(localStorage.getItem(KEY) || '[]'); }
-        catch (e) { ids = []; }
-        ids = ids.filter(function (id) { return id !== storeId; });
-        ids.unshift(storeId);
-        localStorage.setItem(KEY, JSON.stringify(ids.slice(0, 5)));
-    })();
+    // ── 찜 버튼 ──
+    const likeBtn = document.getElementById('likeBtn');
+    if (likeBtn) {
+        const KEY = 'reviewtime_likes';
+        const storeId = '{{ store.pk }}';
+        let likes;
+        try { likes = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { likes = []; }
+
+        if (likes.includes(storeId)) {
+            likeBtn.querySelector('i').className = 'bi bi-heart-fill';
+            likeBtn.style.color = '#FA2D43';
+        }
+
+        likeBtn.addEventListener('click', function () {
+            try { likes = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { likes = []; }
+            const idx = likes.indexOf(storeId);
+            if (idx >= 0) {
+                likes.splice(idx, 1);
+                this.querySelector('i').className = 'bi bi-heart';
+                this.style.color = '';
+            } else {
+                likes.push(storeId);
+                this.querySelector('i').className = 'bi bi-heart-fill';
+                this.style.color = '#FA2D43';
+            }
+            localStorage.setItem(KEY, JSON.stringify(likes));
+        });
+    }
+
+    // ── 공유 ──
+    window.shareStore = function () {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ store.name }} 리뷰 분석',
+                url: window.location.href
+            });
+        } else {
+            navigator.clipboard.writeText(window.location.href)
+                .then(function () { alert('링크가 복사되었습니다.'); })
+                .catch(function () {});
+        }
+    };
+
+
 });
 </script>
 {% endblock %}

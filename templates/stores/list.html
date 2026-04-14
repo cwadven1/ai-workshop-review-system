@@ -36,9 +36,9 @@
                             {{ item.store.name }}
                         </a>
                     </h5>
-                    <span class="badge {% if item.trend == '↑' %}bg-success{% elif item.trend == '↓' %}bg-danger{% else %}bg-secondary{% endif %} fs-6">
-                        {{ item.trend }}
-                    </span>
+                    {% if item.trend == '↑' %}
+                    <span class="badge bg-success fs-6">{{ item.trend }}</span>
+                    {% endif %}
                 </div>
                 <p class="card-text">
                     <span class="badge bg-info text-dark">{{ item.store.get_category_display }}</span>

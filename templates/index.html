@@ -1,50 +1,80 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{% if is_home %}홈{% elif q %}"{{ q }}" 검색 결과{% else %}가게 검색{% endif %} - 요기요 리뷰 분석{% endblock %}
 
 {% block content %}
 
+<!-- ── 홈 배너 ── -->
+{% if is_home %}
+<div class="home-banner">
+    <div>
+        <div class="home-banner-title">리뷰로 찾는<br>우리 동네 맛집</div>
+        <div class="home-banner-sub">AI가 분석한 진짜 맛집 정보</div>
+    </div>
+    <div class="home-banner-icon">🍽️</div>
+</div>
+{% endif %}
+
 <!-- ── 검색 바 ── -->
 <div class="search-section">
-    {% if is_home %}
-    <div class="search-hint">어떤 가게의 리뷰를 분석할까요?</div>
-    {% endif %}
-    <form method="get" action="/" class="search-form-wrap">
+    <form method="get" action="/" class="search-form-wrap" id="search-form">
         <input type="hidden" name="category" value="{{ category }}">
         <input type="hidden" name="trend" value="{{ trend_filter }}">
+        <i class="bi bi-search search-icon-left" onclick="document.getElementById('search-form').submit()"></i>
         <input type="text"
                name="q"
                class="search-input"
                placeholder="가게 이름으로 검색..."
                value="{{ q }}"
                autocomplete="off">
-        <button class="search-btn" type="submit">
-            <i class="bi bi-search"></i>
-        </button>
+        {% if q %}
+        <a href="/?category={{ category }}&trend={{ trend_filter }}" class="search-clear-btn">
+            <i class="bi bi-x-circle-fill"></i>
+        </a>
+        {% endif %}
     </form>
 </div>
 
-<!-- ── 카테고리 + 트렌드 필터 칩 ── -->
-<div class="filter-section">
-    <!-- 카테고리 필터 -->
-    <div class="filter-row">
-        <a href="?q={{ q }}&trend={{ trend_filter }}"
-           class="filter-chip {% if not category %}active{% endif %}">전체</a>
-        {% for cat in categories %}
-        <a href="?q={{ q }}&category={{ cat.value }}&trend={{ trend_filter }}"
-           class="filter-chip {% if category == cat.value %}active{% endif %}">{{ cat.label }}</a>
-        {% endfor %}
-    </div>
-    <!-- 트렌드 필터 -->
-    <div class="filter-row">
-        <a href="?q={{ q }}&category={{ category }}"
-           class="filter-chip {% if not trend_filter %}active{% endif %}">전체</a>
-        <a href="?q={{ q }}&category={{ category }}&trend=up"
-           class="filter-chip {% if trend_filter == 'up' %}active{% endif %}">📈 최근 상승</a>
-        <a href="?q={{ q }}&category={{ category }}&trend=high"
-           class="filter-chip {% if trend_filter == 'high' %}active{% endif %}">⭐ 높은 평점</a>
+<!-- ── 카테고리 아이콘 그리드 ── -->
+{% if is_home %}
+<div class="category-grid-section">
+    <div class="category-grid">
+        <a href="?category=korean" class="category-item {% if category == 'korean' %}active{% endif %}">
+            <div class="category-icon">🍚</div>
+            <span>한식</span>
+        </a>
+        <a href="?category=chicken" class="category-item {% if category == 'chicken' %}active{% endif %}">
+            <div class="category-icon">🍗</div>
+            <span>치킨</span>
+        </a>
+        <a href="?category=chinese" class="category-item {% if category == 'chinese' %}active{% endif %}">
+            <div class="category-icon">🥟</div>
+            <span>중식</span>
+        </a>
+        <a href="?category=western" class="category-item {% if category == 'western' %}active{% endif %}">
+            <div class="category-icon">🍝</div>
+            <span>양식</span>
+        </a>
+        <a href="?category=pizza" class="category-item {% if category == 'pizza' %}active{% endif %}">
+            <div class="category-icon">🍕</div>
+            <span>피자</span>
+        </a>
+        <a href="?category=cafe" class="category-item {% if category == 'cafe' %}active{% endif %}">
+            <div class="category-icon">☕</div>
+            <span>카페</span>
+        </a>
+        <a href="?category=japanese" class="category-item {% if category == 'japanese' %}active{% endif %}">
+            <div class="category-icon">🍣</div>
+            <span>일식</span>
+        </a>
+        <a href="/" class="category-item {% if not category and not q %}active{% endif %}">
+            <div class="category-icon">🍽️</div>
+            <span>전체</span>
+        </a>
     </div>
 </div>
+{% endif %}
 
 <!-- ── 홈 화면: 지금 뜨는 가게 ── -->
 {% if is_home and trending_stores %}
@@ -55,7 +85,11 @@
         {% with store=item.store %}
         <a href="{% url 'store-reviews' store.pk %}" class="trending-card">
             <div class="trending-thumb">
+                {% if store.image_url %}
+                <img src="{% static store.image_url %}" alt="{{ store.name }}">
+                {% else %}
                 <i class="bi bi-shop-window"></i>
+                {% endif %}
             </div>
             <div class="trending-name">{{ store.name }}</div>
             <div class="trending-rating">★ {{ store.avg_rating }}</div>
@@ -67,27 +101,31 @@
 </div>
 {% endif %}
 
-<!-- ── 홈 화면: 최근 본 가게 (JS로 로드) ── -->
-{% if is_home %}
-<div class="section-wrap" id="recent-stores-section" style="display:none;">
-    <div class="section-title">🕐 최근 본 가게</div>
-    <div id="recent-stores-list" class="trending-scroll"></div>
-</div>
-{% endif %}
-
-<!-- ── 검색 결과 수 ── -->
-<div class="result-count">
-    {% if q or category or trend_filter %}
-        <strong>{{ total_count }}개</strong> 가게가 검색되었습니다
-        {% if q %}&nbsp;·&nbsp;"{{ q }}"{% endif %}
-        {% if category %}
-            &nbsp;·&nbsp;{% for cat in categories %}{% if cat.value == category %}{{ cat.label }}{% endif %}{% endfor %}
-        {% endif %}
-        {% if trend_filter == 'up' %}&nbsp;·&nbsp;📈 상승세{% elif trend_filter == 'high' %}&nbsp;·&nbsp;⭐ 높은 평점{% endif %}
-    {% else %}
-        전체 <strong>{{ total_count }}개</strong> 가게
+<!-- ── 필터 탭 바 ── -->
+<div class="filter-tab-bar">
+    <a href="?q={{ q }}&category={{ category }}"
+       class="filter-tab {% if not trend_filter %}active{% endif %}">전체</a>
+    <a href="?q={{ q }}&category={{ category }}&trend=up"
+       class="filter-tab {% if trend_filter == 'up' %}active{% endif %}">📈 상승세</a>
+    {% if not is_home %}
+    {% for cat in categories %}
+    <a href="?q={{ q }}&category={{ cat.value }}&trend={{ trend_filter }}"
+       class="filter-tab {% if category == cat.value %}active{% endif %}">{{ cat.label }}</a>
+    {% endfor %}
     {% endif %}
 </div>
+
+<!-- ── 검색 결과 수 ── -->
+{% if q or category or trend_filter %}
+<div class="result-count">
+    <strong>{{ total_count }}개</strong> 가게
+    {% if q %}&nbsp;·&nbsp;"{{ q }}"{% endif %}
+    {% if category %}
+        &nbsp;·&nbsp;{% for cat in categories %}{% if cat.value == category %}{{ cat.label }}{% endif %}{% endfor %}
+    {% endif %}
+    {% if trend_filter == 'up' %}&nbsp;·&nbsp;📈 상승세{% endif %}
+</div>
+{% endif %}
 
 <!-- ── 가게 카드 목록 ── -->
 {% if store_list %}
@@ -97,32 +135,28 @@
         <div class="store-card-inner">
             <!-- 썸네일 -->
             <div class="store-thumb">
+                {% if store.image_url %}
+                <img src="{% static store.image_url %}" alt="{{ store.name }}">
+                {% else %}
                 <i class="bi bi-shop-window"></i>
+                {% endif %}
             </div>
             <!-- 가게 정보 -->
             <div class="store-info">
                 <div class="store-name">{{ store.name }}</div>
-                <div class="store-category">{{ store.get_category_display }}</div>
                 <div class="store-rating-row">
                     <span class="store-star-icon">★</span>
                     <span class="store-rating-num">{{ store.avg_rating }}</span>
-                    <span class="store-review-count">리뷰 {{ store.total_review_count }}건</span>
+                    <span class="store-review-count">({{ store.total_review_count }})</span>
+                </div>
+                <div class="store-meta-row">
+                    <span class="store-category-chip">{{ store.get_category_display }}</span>
                     {% if trend == 'up' %}
                     <span class="trend-badge trend-badge-up">↑ 상승세</span>
-                    {% elif trend == 'down' %}
-                    <span class="trend-badge trend-badge-down">↓ 하락세</span>
-                    {% else %}
-                    <span class="trend-badge trend-badge-stable">→ 유지</span>
                     {% endif %}
                 </div>
             </div>
         </div>
-        <!-- 스파크라인 (카드 하단 풀 너비) -->
-        {% if mini_data|length >= 2 %}
-        <div class="sparkline-wrap">
-            <canvas id="spark-{{ store.pk }}"></canvas>
-        </div>
-        {% endif %}
     </a>
     {% endwith %}
     {% endfor %}
@@ -136,97 +170,6 @@
     </div>
 {% endif %}
 
-{{ sparkline_data|json_script:"sparkline-data" }}
-
 {% endblock %}
 
 
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    // ── 스파크라인 차트 초기화 ──
-    if (typeof Chart !== 'undefined') {
-        let sparkData = {};
-        try {
-            sparkData = JSON.parse(document.getElementById('sparkline-data').textContent);
-        } catch (e) {}
-
-        Object.entries(sparkData).forEach(function ([storeId, d]) {
-            const canvas = document.getElementById('spark-' + storeId);
-            if (!canvas || !d.data || d.data.length < 2) return;
-
-            const color = d.trend === 'up'  ? '#FA2D43'
-                        : d.trend === 'down' ? '#767676'
-                        : '#AAAAAA';
-
-            new Chart(canvas, {
-                type: 'line',
-                data: {
-                    labels: d.labels,
-                    datasets: [{
-                        data: d.data,
-                        borderColor: color,
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0,
-                        tension: 0.3,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: { padding: 2 },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false },
-                    },
-                    scales: {
-                        x: { display: false },
-                        y: { display: false, min: 0.5, max: 5.5 },
-                    },
-                    animation: false,
-                }
-            });
-        });
-    }
-
-    {% if is_home %}
-    // ── 최근 본 가게 로드 (localStorage) ──
-    (function () {
-        const KEY = 'reviewtime_recent_stores';
-        let ids;
-        try { ids = JSON.parse(localStorage.getItem(KEY) || '[]'); }
-        catch (e) { ids = []; }
-        if (!ids.length) return;
-
-        fetch('/stores/recent/?ids=' + ids.join(','))
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (!data.stores || !data.stores.length) return;
-
-                const list = document.getElementById('recent-stores-list');
-                const section = document.getElementById('recent-stores-section');
-                if (!list || !section) return;
-
-                list.innerHTML = data.stores.map(function (s) {
-                    const upBadge = s.trend === 'up'
-                        ? '<span class="trending-up-badge">↑ 상승세</span>'
-                        : '';
-                    return '<a href="' + s.url + '" class="trending-card">'
-                        + '<div class="trending-thumb"><i class="bi bi-shop-window"></i></div>'
-                        + '<div class="trending-name">' + s.name + '</div>'
-                        + '<div class="trending-rating">★ ' + s.avg_rating.toFixed(1) + '</div>'
-                        + upBadge
-                        + '</a>';
-                }).join('');
-
-                section.style.display = '';
-            })
-            .catch(function () {});
-    })();
-    {% endif %}
-
-});
-</script>
-{% endblock %}

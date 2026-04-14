@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#FFFBF0"/>
+  <defs>
+    <radialGradient id="chickenSkin" cx="45%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#FFD54F"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </radialGradient>
+    <radialGradient id="drumSkin" cx="45%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#FFC107"/>
+      <stop offset="100%" stop-color="#BF360C"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 트레이 그림자 -->
+  <ellipse cx="202" cy="258" rx="160" ry="14" fill="#00000015"/>
+  <!-- 트레이 -->
+  <ellipse cx="200" cy="245" rx="160" ry="14" fill="#D4B896"/>
+  <rect x="40" y="185" width="320" height="60" rx="12" fill="#E8D5B5"/>
+  <ellipse cx="200" cy="185" rx="160" ry="14" fill="#F0E0C0"/>
+
+  <!-- 치킨 1 (후라이드 큰 조각) -->
+  <!-- 뼈 -->
+  <rect x="148" y="115" width="8" height="70" rx="4" fill="#F5F5DC"/>
+  <!-- 고기 -->
+  <ellipse cx="152" cy="140" rx="38" ry="42" fill="url(#chickenSkin)"/>
+  <ellipse cx="148" cy="135" rx="32" ry="36" fill="#FFCA28"/>
+  <!-- 튀김옷 크랙 -->
+  <path d="M130 128 Q138 120 142 130" fill="none" stroke="#E65100" stroke-width="2" stroke-linecap="round"/>
+  <path d="M158 118 Q165 112 168 122" fill="none" stroke="#BF360C" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M135 148 Q141 142 144 152" fill="none" stroke="#E65100" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M155 155 Q162 150 164 160" fill="none" stroke="#BF360C" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- 튀김옷 텍스처 -->
+  <circle cx="140" cy="135" r="3" fill="#BF360C" opacity="0.4"/>
+  <circle cx="162" cy="128" r="2.5" fill="#BF360C" opacity="0.4"/>
+  <circle cx="155" cy="148" r="2" fill="#E65100" opacity="0.4"/>
+  <circle cx="133" cy="145" r="2.5" fill="#BF360C" opacity="0.3"/>
+
+  <!-- 치킨 2 (드럼스틱) -->
+  <!-- 뼈 -->
+  <rect x="220" y="100" width="7" height="80" rx="3.5" fill="#F5F5DC" transform="rotate(20 220 100)"/>
+  <!-- 고기 -->
+  <ellipse cx="238" cy="155" rx="30" ry="35" fill="url(#drumSkin)" transform="rotate(20 238 155)"/>
+  <ellipse cx="235" cy="150" rx="24" ry="28" fill="#FFB300" transform="rotate(20 235 150)"/>
+  <!-- 튀김옷 크랙 -->
+  <path d="M222 140 Q229 133 232 143" fill="none" stroke="#E65100" stroke-width="2" stroke-linecap="round" transform="rotate(20 222 140)"/>
+  <path d="M245 135 Q251 129 254 138" fill="none" stroke="#BF360C" stroke-width="1.5" stroke-linecap="round" transform="rotate(20 245 135)"/>
+  <!-- 텍스처 -->
+  <circle cx="230" cy="148" r="2.5" fill="#BF360C" opacity="0.4"/>
+  <circle cx="248" cy="142" r="2" fill="#E65100" opacity="0.3"/>
+  <circle cx="235" cy="165" r="2" fill="#BF360C" opacity="0.4"/>
+
+  <!-- 치킨 3 (날개) -->
+  <path d="M285 175 Q295 155 315 150 Q330 148 335 160 Q328 178 310 182 Q294 182 285 175Z" fill="url(#chickenSkin)"/>
+  <path d="M290 173 Q300 157 318 153 Q328 152 331 162 Q325 176 310 179 Q296 179 290 173Z" fill="#FFD740"/>
+  <!-- 텍스처 -->
+  <circle cx="308" cy="162" r="2" fill="#E65100" opacity="0.5"/>
+  <circle cx="318" cy="158" r="1.8" fill="#BF360C" opacity="0.4"/>
+  <circle cx="300" cy="168" r="2.2" fill="#E65100" opacity="0.4"/>
+
+  <!-- 소스 컵 -->
+  <rect x="50" y="190" width="44" height="35" rx="5" fill="#E53935"/>
+  <rect x="50" y="190" width="44" height="12" rx="5" fill="#EF5350"/>
+  <text x="72" y="214" font-family="sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="bold">소스</text>
+
+  <!-- 감자튀김 -->
+  <rect x="320" y="150" width="8" height="35" rx="3" fill="#FFC107" transform="rotate(-8 320 150)"/>
+  <rect x="332" y="148" width="8" height="38" rx="3" fill="#FFD54F" transform="rotate(3 332 148)"/>
+  <rect x="344" y="152" width="8" height="32" rx="3" fill="#FFC107" transform="rotate(-5 344 152)"/>
+  <rect x="356" y="150" width="8" height="36" rx="3" fill="#FFD54F" transform="rotate(7 356 150)"/>
+  <rect x="315" y="182" width="55" height="12" rx="6" fill="#E0C080"/>
+
+  <!-- 라벨 -->
+  <rect x="10" y="10" width="90" height="28" rx="14" fill="#E65100"/>
+  <text x="55" y="29" font-family="sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">후라이드치킨</text>
+</svg>
