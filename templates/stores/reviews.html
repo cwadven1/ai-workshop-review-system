@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ store.name }} - 요기요 리뷰 분석{% endblock %}
+{% block title %}{{ store.name }} - 요기요{% endblock %}
 
 {% block content %}
 
@@ -48,7 +48,7 @@
 <!-- ── 주차별 별점 트렌드 차트 ── -->
 <div class="detail-section">
     <div class="detail-section-title"><i class="bi bi-graph-up me-1"></i>주차별 별점 트렌드</div>
-    <div style="height: 220px; position: relative;">
+    <div style="height: 240px; position: relative;">
         <div id="ratingTrendChart" style="width:100%;height:100%;"></div>
     </div>
 </div>

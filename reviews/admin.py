@@ -1,19 +1,13 @@
 from django.contrib import admin
 
-from .models import MenuReview, Review, WeeklySummary
+from .models import MenuReview, Review
 
 
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = ("store", "rating", "sentiment", "year_week", "review_date")
-    list_filter = ("sentiment", "year_week", "store")
+    list_display = ("store", "rating", "sentiment", "week", "review_date", "is_deleted", "is_blinded")
+    list_filter = ("sentiment", "week", "store", "is_deleted", "is_blinded")
     search_fields = ("content",)
-
-
-@admin.register(WeeklySummary)
-class WeeklySummaryAdmin(admin.ModelAdmin):
-    list_display = ("store", "year_week", "avg_rating", "review_count", "rating_change")
-    list_filter = ("year_week", "store")
 
 
 @admin.register(MenuReview)

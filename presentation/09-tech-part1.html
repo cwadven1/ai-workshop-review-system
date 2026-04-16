@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>어디가좋은데? - 주차별 리뷰 데이터 추출</title>
+<style>
+  html { font-size: 20px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    word-break: keep-all;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header h1 span { color: #FA0050; }
+  .header p { font-size: 1rem; color: #888; }
+
+  .part-badge {
+    display: inline-block;
+    background: #FFF0F3;
+    color: #FA0050;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  /* 흐름도 */
+  .flow-wrap {
+    max-width: 1060px;
+    margin: 0 auto 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .flow-node {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 20px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    min-width: 130px;
+    flex: 1;
+    max-width: 170px;
+  }
+  .flow-node.accent { border-top: 3px solid #FA0050; }
+  .flow-node.green  { border-top: 3px solid #00B894; }
+  .flow-node.blue   { border-top: 3px solid #0984E3; }
+  .flow-node.gray   { border-top: 3px solid #b2bec3; opacity: 0.7; }
+  .flow-icon { font-size: 1.6rem; margin-bottom: 6px; }
+  .flow-label { font-size: 0.78rem; font-weight: 700; color: #222; }
+  .flow-sub   { font-size: 0.65rem; color: #999; margin-top: 3px; }
+  .flow-arrow { font-size: 1.2rem; color: #ccc; padding: 0 6px; flex-shrink: 0; }
+
+  /* 섹션 타이틀 */
+  .section-title { text-align: center; font-size: 1.1rem; font-weight: 700; color: #222; margin: 40px 0 16px; }
+  .section-title span { color: #FA0050; }
+
+  /* 카드 그리드 */
+  .card-grid {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+  .card-icon { font-size: 1.6rem; margin-bottom: 10px; }
+  .card h3 { font-size: 0.9rem; font-weight: 700; color: #222; margin-bottom: 8px; }
+  .card p { font-size: 0.78rem; color: #666; line-height: 1.7; }
+  .card code { background: #FFF0F3; color: #FA0050; font-size: 0.73rem; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+
+  /* 모델 테이블 */
+  .table-wrap {
+    max-width: 860px;
+    margin: 0 auto 40px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+  .table-header {
+    background: #FA0050;
+    color: #fff;
+    padding: 14px 24px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f8f8; font-size: 0.72rem; color: #888; font-weight: 600; padding: 10px 16px; text-align: left; }
+  td { font-size: 0.78rem; color: #555; padding: 11px 16px; border-bottom: 1px solid #f5f5f5; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .tr-highlight td { background: #FFF8F0; }
+  .tr-highlight td:first-child { border-left: 3px solid #FF9100; }
+  .badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .badge-pk { background: #FFF0F3; color: #FA0050; }
+  .badge-fk { background: #E8FFF5; color: #00B894; }
+  .badge-idx { background: #FFF3E0; color: #FF9100; }
+  .field-name { font-weight: 700; color: #222; font-family: monospace; }
+  .field-type { color: #6C5CE7; font-family: monospace; font-size: 0.72rem; }
+  .field-desc { color: #888; }
+
+  /* 코드 블록 */
+  .code-wrap {
+    max-width: 860px;
+    margin: 0 auto 40px;
+    background: #1a1d2e;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .code-header {
+    background: #22263a;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .code-filename { font-size: 0.65rem; color: #8892b0; font-family: monospace; }
+  .code-body {
+    padding: 22px 26px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 0.72rem;
+    line-height: 1.85;
+    color: #cdd6f4;
+    overflow-x: auto;
+  }
+  .kw  { color: #ff79c6; }
+  .fn  { color: #50fa7b; }
+  .str { color: #f1fa8c; }
+  .cm  { color: #6272a4; font-style: italic; }
+  .num { color: #bd93f9; }
+  .var { color: #ffb86c; }
+
+  /* 네비 */
+  .nav { text-align: center; margin-top: 48px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; }
+  .nav a:hover { background: #e0004a; }
+  .nav a.back { background: #ddd; color: #555; }
+  .nav a.back:hover { background: #ccc; }
+  .page-indicator { text-align: center; margin-top: 16px; font-size: 0.75rem; color: #bbb; }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="part-badge">PART 1 · 기술 구현</div>
+    <div class="logo">어디가좋은데?</div>
+    <h1>주차별 리뷰 <span>데이터 추출</span></h1>
+    <p>리뷰 날짜를 ISO 주차로 변환·저장하고 DB 인덱스로 빠르게 조회</p>
+  </div>
+
+  <!-- 흐름도 -->
+  <div class="flow-wrap">
+    <div class="flow-node accent">
+      <div class="flow-icon">🏪</div>
+      <div class="flow-label">reviewyo</div>
+      <div class="flow-sub">요기요 원천 리뷰</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node blue">
+      <div class="flow-icon">☁️</div>
+      <div class="flow-label">BigQuery</div>
+      <div class="flow-sub">리뷰 데이터 축적</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node gray">
+      <div class="flow-icon">📥</div>
+      <div class="flow-label">reviewtime.Review</div>
+      <div class="flow-sub">import 예정</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node green">
+      <div class="flow-icon">💾</div>
+      <div class="flow-label">ShopWeekReview</div>
+      <div class="flow-sub">스케줄러 집계</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node green">
+      <div class="flow-icon">🔍</div>
+      <div class="flow-label">주차별 조회</div>
+      <div class="flow-sub">Trends API</div>
+    </div>
+  </div>
+
+  <!-- ShopWeekReview 모델 -->
+  <h2 class="section-title"><span>ShopWeekReview</span> 모델 — 핵심 필드</h2>
+  <div class="table-wrap">
+    <div class="table-header" style="justify-content: space-between;">
+      <span>🗂 ShopWeekReview</span>
+      <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; font-weight:400;">⏱ 스케줄러가 주기적으로 집계하여 생성</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px">타입</th>
+          <th style="width:160px">필드명</th>
+          <th style="width:140px">타입</th>
+          <th>설명</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-pk">PK</span></td>
+          <td class="field-name">id</td>
+          <td class="field-type">AutoField</td>
+          <td class="field-desc">기본 키 (자동 증가)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-fk">FK</span></td>
+          <td class="field-name">shop_id</td>
+          <td class="field-type">ForeignKey</td>
+          <td class="field-desc">Shop 참조 — 어느 가게의 집계인지</td>
+        </tr>
+        <tr class="tr-highlight">
+          <td><span class="badge badge-idx">IDX</span></td>
+          <td class="field-name">year</td>
+          <td class="field-type">IntegerField</td>
+          <td class="field-desc">집계 연도 (예: 2025) ★</td>
+        </tr>
+        <tr class="tr-highlight">
+          <td><span class="badge badge-idx">IDX</span></td>
+          <td class="field-name">week_number</td>
+          <td class="field-type">IntegerField</td>
+          <td class="field-desc">ISO 주차 번호 (1–53) ★</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">count</td>
+          <td class="field-type">IntegerField</td>
+          <td class="field-desc">해당 주 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">average</td>
+          <td class="field-type">FloatField</td>
+          <td class="field-desc">해당 주 평균 별점 (1.0–5.0)</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="background:#9b59b6;color:#fff;font-size:10px;padding:2px 5px;border-radius:4px;">AI</span></td>
+          <td class="field-name">summary</td>
+          <td class="field-type">TextField</td>
+          <td class="field-desc">AI 생성 주차 전체 요약 (GPT-4o-mini)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">positive_count</td>
+          <td class="field-type">IntegerField</td>
+          <td class="field-desc">긍정 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">negative_count</td>
+          <td class="field-type">IntegerField</td>
+          <td class="field-desc">부정 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">neutral_count</td>
+          <td class="field-type">IntegerField</td>
+          <td class="field-desc">중립 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">created_at</td>
+          <td class="field-type">DateTimeField</td>
+          <td class="field-desc">레코드 생성 일시 (auto_now_add)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">updated_at</td>
+          <td class="field-type">DateTimeField</td>
+          <td class="field-desc">레코드 수정 일시 (auto_now)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ShopWeekSentimentReveiw 모델 -->
+  <h2 class="section-title"><span>ShopWeekSentimentReveiw</span> 모델</h2>
+  <div class="table-wrap">
+    <div class="table-header" style="justify-content: space-between;">
+      <span>🗂 ShopWeekSentimentReveiw</span>
+      <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; font-weight:400;">ShopWeekReview N:1 — 감성별 분석 결과 누적 · 최신 3개 표시</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px">타입</th>
+          <th style="width:160px">필드명</th>
+          <th style="width:140px">타입</th>
+          <th>설명</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-pk">PK</span></td>
+          <td class="field-name">id</td>
+          <td class="field-type">AutoField</td>
+          <td class="field-desc">기본 키 (자동 증가)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-fk">FK</span></td>
+          <td class="field-name">shop_week_review_id</td>
+          <td class="field-type">ForeignKey</td>
+          <td class="field-desc">ShopWeekReview 참조 (N:1)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">sentiment</td>
+          <td class="field-type">CharField</td>
+          <td class="field-desc">감성 분류 (positive / negative / neutral)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-ai">AI</span></td>
+          <td class="field-name">content</td>
+          <td class="field-type">TextField</td>
+          <td class="field-desc">AI 생성 감성 분석 내용 (GPT-4o-mini)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">created_at</td>
+          <td class="field-type">DateTimeField</td>
+          <td class="field-desc">생성 일시</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">updated_at</td>
+          <td class="field-type">DateTimeField</td>
+          <td class="field-desc">수정 일시</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ShopWeekReview DML -->
+  <h2 class="section-title">ShopWeekReview 집계 DML
+    <span style="display:block;font-size:0.75rem;font-weight:400;color:#6b7280;margin-top:4px;">
+      소스: <code style="font-size:0.72rem;">reviewtime.Review</code> &nbsp;·&nbsp; BigQuery → import 후 집계 &nbsp;·&nbsp; <code style="font-size:0.72rem;">idx_store_year_week</code> 인덱스
+    </span>
+  </h2>
+
+  <!-- SQL 1: 초기 12주치 -->
+  <div class="code-wrap">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+      <span class="code-filename">seed_shop_week_review_init.sql &nbsp;— 각 가게별 첫 12주치 초기 삽입</span>
+    </div>
+    <div class="code-body"><pre><span class="cm">-- ① 각 가게별 첫 리뷰 주차 기준 12주치 초기 데이터 삽입</span>
+<span class="kw">INSERT INTO</span> shop_week_review
+    (shop_id, year, week_number, count, average,
+     summary, positive_count, negative_count, neutral_count)
+
+<span class="kw">WITH</span>
+  <span class="cm">-- 삭제·블라인드 제외한 유효 리뷰의 (vendor, ISO주차) 조합</span>
+  distinct_vendor_weeks <span class="kw">AS</span> (
+    <span class="kw">SELECT DISTINCT</span> vendor_id, <span class="fn">YEARWEEK</span>(created_at, <span class="num">3</span>) <span class="kw">AS</span> yw
+    <span class="kw">FROM</span>   review
+    <span class="kw">WHERE</span>  deleted = <span class="num">0</span> <span class="kw">AND</span> blinded = <span class="num">0</span>
+  ),
+  <span class="cm">-- 각 가게별 ISO 주차 오름차순 순번 부여</span>
+  ranked_weeks <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> vendor_id, yw,
+           <span class="fn">ROW_NUMBER</span>() <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> vendor_id <span class="kw">ORDER BY</span> yw) <span class="kw">AS</span> rn
+    <span class="kw">FROM</span>   distinct_vendor_weeks
+  ),
+  <span class="cm">-- 첫 12주만 추출</span>
+  first_12_weeks <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> vendor_id, yw <span class="kw">FROM</span> ranked_weeks <span class="kw">WHERE</span> rn &lt;= <span class="num">12</span>
+  )
+
+<span class="kw">SELECT</span>
+    r.vendor_id,
+    <span class="fn">FLOOR</span>(f.yw / <span class="num">100</span>)        <span class="kw">AS</span> year,
+    <span class="fn">MOD</span>(f.yw, <span class="num">100</span>)            <span class="kw">AS</span> week_number,
+    <span class="fn">COUNT</span>(r.id)               <span class="kw">AS</span> count,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(r.rating), <span class="num">2</span>)   <span class="kw">AS</span> average,
+    <span class="kw">NULL</span>, <span class="kw">NULL</span>, <span class="kw">NULL</span>, <span class="kw">NULL</span>    <span class="cm">-- summary / positive / negative / neutral_count</span>
+<span class="kw">FROM</span>   review r
+<span class="kw">JOIN</span>   first_12_weeks f
+  <span class="kw">ON</span>   r.vendor_id = f.vendor_id
+  <span class="kw">AND</span>  <span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>) = f.yw
+<span class="kw">WHERE</span>  r.deleted = <span class="num">0</span> <span class="kw">AND</span> r.blinded = <span class="num">0</span>
+<span class="kw">GROUP  BY</span> r.vendor_id, f.yw;</pre>
+    </div>
+  </div>
+
+  <!-- SQL 2: 증분 업데이트 스케줄러 -->
+  <div class="code-wrap">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+      <span class="code-filename">update_shop_week_review_incremental.sql &nbsp;— 변경된 조합만 감지하여 재집계 (스케줄러 실행용)</span>
+    </div>
+    <div class="code-body"><pre><span class="cm">-- ② 변경된 (shop, year, week) 조합만 감지하여 증분 재집계</span>
+<span class="cm">--    watermark = stores_shopweekreview.updated_at</span>
+<span class="cm">--    변경 없으면 INSERT/UPDATE 0건 → 성능 영향 없음</span>
+<span class="kw">INSERT INTO</span> stores_shopweekreview (shop_id, year, week_number, count, average)
+
+<span class="kw">WITH</span>
+<span class="cm">-- ① watermark 이후 변경된 리뷰가 있는 (shop, year, week)</span>
+<span class="cm">--    created_at / updated_at / deleted_at / blinded_at 모두 감지</span>
+changed_combos <span class="kw">AS</span> (
+    <span class="kw">SELECT DISTINCT</span>
+        r.store_id,
+        <span class="fn">FLOOR</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>) / <span class="num">100</span>) <span class="kw">AS</span> year,
+        <span class="fn">MOD</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>), <span class="num">100</span>)    <span class="kw">AS</span> week_number
+    <span class="kw">FROM</span> reviews_review r
+    <span class="kw">INNER JOIN</span> stores_shopweekreview swr
+           <span class="kw">ON</span>  swr.shop_id     = r.store_id
+           <span class="kw">AND</span> swr.year        = <span class="fn">FLOOR</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>) / <span class="num">100</span>)
+           <span class="kw">AND</span> swr.week_number = <span class="fn">MOD</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>), <span class="num">100</span>)
+    <span class="kw">WHERE</span> r.created_at  &gt; swr.updated_at
+       <span class="kw">OR</span> r.updated_at  &gt; swr.updated_at
+       <span class="kw">OR</span> r.deleted_at  &gt; swr.updated_at
+       <span class="kw">OR</span> r.blinded_at  &gt; swr.updated_at
+),
+<span class="cm">-- ② 아직 집계 row 없는 신규 조합</span>
+new_combos <span class="kw">AS</span> (
+    <span class="kw">SELECT DISTINCT</span>
+        r.store_id,
+        <span class="fn">FLOOR</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>) / <span class="num">100</span>) <span class="kw">AS</span> year,
+        <span class="fn">MOD</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>), <span class="num">100</span>)    <span class="kw">AS</span> week_number
+    <span class="kw">FROM</span> reviews_review r
+    <span class="kw">LEFT JOIN</span> stores_shopweekreview swr
+           <span class="kw">ON</span>  swr.shop_id     = r.store_id
+           <span class="kw">AND</span> swr.year        = <span class="fn">FLOOR</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>) / <span class="num">100</span>)
+           <span class="kw">AND</span> swr.week_number = <span class="fn">MOD</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>), <span class="num">100</span>)
+    <span class="kw">WHERE</span> swr.shop_id <span class="kw">IS NULL</span>
+),
+target_combos <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> store_id, year, week_number <span class="kw">FROM</span> changed_combos
+    <span class="kw">UNION</span>
+    <span class="kw">SELECT</span> store_id, year, week_number <span class="kw">FROM</span> new_combos
+)
+
+<span class="cm">-- ③ 현재 DB 상태 기준 활성 리뷰만 재집계</span>
+<span class="kw">SELECT</span>
+    t.store_id             <span class="kw">AS</span> shop_id,
+    t.year,
+    t.week_number,
+    <span class="fn">COUNT</span>(r.id)            <span class="kw">AS</span> count,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(r.rating), <span class="num">2</span>) <span class="kw">AS</span> average
+<span class="kw">FROM</span> target_combos t
+<span class="kw">JOIN</span> reviews_review r
+  <span class="kw">ON</span>  r.store_id                              = t.store_id
+  <span class="kw">AND</span> <span class="fn">FLOOR</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>) / <span class="num">100</span>) = t.year
+  <span class="kw">AND</span> <span class="fn">MOD</span>(<span class="fn">YEARWEEK</span>(r.created_at, <span class="num">3</span>), <span class="num">100</span>)   = t.week_number
+  <span class="kw">AND</span> r.is_deleted = <span class="kw">FALSE</span>
+  <span class="kw">AND</span> r.is_blinded = <span class="kw">FALSE</span>
+<span class="kw">GROUP BY</span> t.store_id, t.year, t.week_number
+
+<span class="kw">ON DUPLICATE KEY UPDATE</span>
+    count      = <span class="fn">VALUES</span>(count),
+    average    = <span class="fn">VALUES</span>(average),
+    updated_at = <span class="fn">NOW</span>();  <span class="cm">-- watermark 갱신</span></pre>
+    </div>
+  </div>
+
+  <!-- 카드 3개 -->
+  <h2 class="section-title">핵심 설계 포인트</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>복합 DB 인덱스</h3>
+      <p>
+        <code>idx_shop_year_week</code> — shop + year + week_number 복합 인덱스.<br><br>
+        특정 가게의 주차별 쿼리를 풀스캔 없이 처리합니다.
+        <code>idx_shop_year_month</code>도 동일하게 적용.
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔌</div>
+      <h3>Trends API</h3>
+      <p>
+        <code>GET /api/trends/{store_id}/</code><br><br>
+        ShopWeekReview를 <code>year</code>, <code>week_number</code> 오름차순으로 직렬화 반환. 차트가 이 데이터로 평점 추이·리뷰 수·감성 비율을 렌더링합니다.
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>IN 쿼리로 N+1 방지</h3>
+      <p>
+        주차 목록을 한 번에 <code>year__in=years, week_number__in=week_numbers</code> 로 조회.<br><br>
+        주차별 루프에서 개별 쿼리를 발생시키지 않습니다.
+      </p>
+    </div>
+  </div>
+
+  <!-- Django Management Commands -->
+  <h2 class="section-title">ShopWeekReview 집계 — Django Command
+    <span style="display:block;font-size:0.75rem;font-weight:400;color:#6b7280;margin-top:4px;">
+      소스: <code style="font-size:0.72rem;">reviews.Review (reviewtime ORM)</code> &nbsp;·&nbsp; ISO 주차: <code style="font-size:0.72rem;">year=2025, week_number=14</code>
+    </span>
+  </h2>
+
+  <!-- Command 1: 초기 12주치 -->
+  <div class="code-wrap">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+      <span class="code-filename">seed_shop_week_review_init.py &nbsp;— 각 가게별 첫 12주치 초기 삽입</span>
+    </div>
+    <div class="code-body"><pre><span class="cm"># python manage.py seed_shop_week_review_init</span>
+<span class="kw">from</span> django.core.management.base <span class="kw">import</span> <span class="fn">BaseCommand</span>
+<span class="kw">from</span> django.db.models <span class="kw">import</span> <span class="fn">Avg</span>, <span class="fn">Count</span>
+<span class="kw">from</span> reviews.models <span class="kw">import</span> <span class="fn">Review</span>
+<span class="kw">from</span> stores.models <span class="kw">import</span> <span class="fn">ShopWeekReview</span>   <span class="cm"># 추가 예정 모델</span>
+
+<span class="kw">class</span> <span class="fn">Command</span>(<span class="fn">BaseCommand</span>):
+    help = <span class="str">"각 가게별 첫 12주치 ShopWeekReview 초기 삽입"</span>
+
+    <span class="kw">def</span> <span class="fn">handle</span>(<span class="var">self</span>, *<span class="var">args</span>, **<span class="var">options</span>):
+        <span class="cm"># 가게별 (year, week_number) 오름차순 distinct 목록</span>
+        <span class="var">date_qs</span> = (
+            <span class="fn">Review</span>.objects
+            .values(<span class="str">"store_id"</span>, <span class="str">"review_date"</span>)
+            .distinct()
+            .order_by(<span class="str">"store_id"</span>, <span class="str">"review_date"</span>)
+        )
+
+        <span class="cm"># 가게별 첫 12주만 추출</span>
+        <span class="var">store_weeks</span> = {}
+        <span class="kw">for</span> <span class="var">row</span> <span class="kw">in</span> <span class="var">date_qs</span>:
+            <span class="var">sid</span> = <span class="var">row</span>[<span class="str">"store_id"</span>]
+            <span class="var">iso</span> = <span class="var">row</span>[<span class="str">"review_date"</span>].isocalendar()
+            <span class="var">yw</span> = (<span class="fn">int</span>(<span class="var">iso</span>[<span class="num">0</span>]), <span class="fn">int</span>(<span class="var">iso</span>[<span class="num">1</span>]))
+            <span class="kw">if</span> <span class="var">sid</span> <span class="kw">not in</span> <span class="var">store_weeks</span>:
+                <span class="var">store_weeks</span>[<span class="var">sid</span>] = []
+            <span class="kw">if</span> <span class="var">yw</span> <span class="kw">not in</span> <span class="var">store_weeks</span>[<span class="var">sid</span>] <span class="kw">and</span> len(<span class="var">store_weeks</span>[<span class="var">sid</span>]) &lt; <span class="num">12</span>:
+                <span class="var">store_weeks</span>[<span class="var">sid</span>].append(<span class="var">yw</span>)
+
+        <span class="var">created</span> = <span class="num">0</span>
+        <span class="kw">for</span> <span class="var">store_id</span>, <span class="var">year_weeks</span> <span class="kw">in</span> <span class="var">store_weeks</span>.items():
+            <span class="kw">for</span> <span class="var">year</span>, <span class="var">week_number</span> <span class="kw">in</span> <span class="var">year_weeks</span>:
+                <span class="var">revs</span> = <span class="fn">Review</span>.objects.filter(
+                    store_id=<span class="var">store_id</span>, review_date__week=<span class="var">week_number</span>,
+                    is_deleted=<span class="kw">False</span>, is_blinded=<span class="kw">False</span>,
+                )
+                <span class="fn">ShopWeekReview</span>.objects.create(
+                    shop_id=<span class="var">store_id</span>,
+                    year=<span class="var">year</span>, week_number=<span class="var">week_number</span>,
+                    count=<span class="var">revs</span>.count(),
+                    average=<span class="fn">round</span>(<span class="var">revs</span>.aggregate(<span class="fn">Avg</span>(<span class="str">"rating"</span>))[<span class="str">"rating__avg"</span>] <span class="kw">or</span> <span class="num">0</span>, <span class="num">2</span>),
+                )
+                <span class="var">created</span> += <span class="num">1</span>
+
+        <span class="var">self</span>.stdout.write(<span class="var">self</span>.style.<span class="fn">SUCCESS</span>(<span class="str">f"총 {created}건 삽입 완료"</span>))</pre>
+    </div>
+  </div>
+
+  <!-- Command 2: 오늘 기준 스케줄러 -->
+  <div class="code-wrap">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+      <span class="code-filename">seed_shop_week_review_today.py &nbsp;— 오늘 기준 현재 주차 UPSERT (스케줄러 실행용)</span>
+    </div>
+    <div class="code-body"><pre><span class="cm"># python manage.py seed_shop_week_review_today</span>
+<span class="kw">from</span> datetime <span class="kw">import</span> date
+<span class="kw">from</span> django.core.management.base <span class="kw">import</span> <span class="fn">BaseCommand</span>
+<span class="kw">from</span> django.db.models <span class="kw">import</span> <span class="fn">Avg</span>, <span class="fn">Count</span>
+<span class="kw">from</span> reviews.models <span class="kw">import</span> <span class="fn">Review</span>
+<span class="kw">from</span> stores.models <span class="kw">import</span> <span class="fn">ShopWeekReview</span>   <span class="cm"># 추가 예정 모델</span>
+
+<span class="kw">class</span> <span class="fn">Command</span>(<span class="fn">BaseCommand</span>):
+    help = <span class="str">"오늘 기준 현재 주차 ShopWeekReview 집계 UPSERT (스케줄러용)"</span>
+
+    <span class="kw">def</span> <span class="fn">handle</span>(<span class="var">self</span>, *<span class="var">args</span>, **<span class="var">options</span>):
+        <span class="var">today</span>     = date.today()
+        <span class="var">iso</span>       = <span class="var">today</span>.isocalendar()
+        <span class="var">year</span>, <span class="var">week</span> = <span class="fn">int</span>(<span class="var">iso</span>[<span class="num">0</span>]), <span class="fn">int</span>(<span class="var">iso</span>[<span class="num">1</span>])
+
+        <span class="cm"># 이번 주 리뷰 → 가게별 count / average</span>
+        <span class="var">agg</span> = (
+            <span class="fn">Review</span>.objects
+            .filter(review_date__week=<span class="var">week</span>, is_deleted=<span class="kw">False</span>, is_blinded=<span class="kw">False</span>)
+            .values(<span class="str">"store_id"</span>)
+            .annotate(<span class="var">cnt</span>=<span class="fn">Count</span>(<span class="str">"id"</span>), <span class="var">avg</span>=<span class="fn">Avg</span>(<span class="str">"rating"</span>))
+        )
+
+        <span class="var">upserted</span> = <span class="num">0</span>
+        <span class="kw">for</span> <span class="var">row</span> <span class="kw">in</span> <span class="var">agg</span>:
+            <span class="fn">ShopWeekReview</span>.objects.update_or_create(
+                shop_id=<span class="var">row</span>[<span class="str">"store_id"</span>],
+                year=<span class="var">year</span>, week_number=<span class="var">week</span>,
+                defaults={
+                    <span class="str">"count"</span>:   <span class="var">row</span>[<span class="str">"cnt"</span>],
+                    <span class="str">"average"</span>: <span class="fn">round</span>(<span class="var">row</span>[<span class="str">"avg"</span>], <span class="num">2</span>),
+                },
+            )
+            <span class="var">upserted</span> += <span class="num">1</span>
+
+        <span class="var">self</span>.stdout.write(
+            <span class="var">self</span>.style.<span class="fn">SUCCESS</span>(<span class="str">f"{year}-W{week:02d} | {upserted}개 가게 UPSERT 완료"</span>)
+        )</pre>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="08-demo.html" class="back">&larr; 이전</a>
+    <a href="10-tech-part2.html">다음: 주차별 요약 AI 생성 &rarr;</a>
+  </div>
+  <div class="page-indicator">9 / 11</div>
+</body>
+</html>

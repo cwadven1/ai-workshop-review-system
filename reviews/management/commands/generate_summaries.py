@@ -4,8 +4,8 @@ from collections import defaultdict
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from reviews.models import Review, WeeklySummary
-from stores.models import Store
+from reviews.models import Review
+from stores.models import Keyword, ShopWeekReview, ShopWeekSentimentReveiw, ShopWeekReviewKeyword, Store
 
 
 class Command(BaseCommand):
@@ -13,13 +13,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--store_id", type=int, required=True, help="가게 ID")
-        parser.add_argument(
-            "--year_week", type=str, required=True, help="연주차 (예: 2025-W14)"
-        )
+        parser.add_argument("--week", type=int, required=True, help="주차 (예: 14)")
 
     def handle(self, *args, **options):
         store_id = options["store_id"]
-        year_week = options["year_week"]
+        week_number = options["week"]
 
         try:
             store = Store.objects.get(pk=store_id)
@@ -27,180 +25,167 @@ class Command(BaseCommand):
             self.stderr.write(f"가게 ID {store_id}을(를) 찾을 수 없습니다.")
             return
 
-        reviews = Review.objects.filter(store=store, year_week=year_week)
+        reviews = Review.objects.filter(store=store, week=week_number, is_deleted=False, is_blinded=False)
         if not reviews.exists():
-            self.stderr.write(
-                f"{store.name}의 {year_week} 리뷰가 없습니다."
-            )
+            self.stderr.write(f"{store.name}의 {week_number}주차 리뷰가 없습니다.")
             return
 
-        self.stdout.write(
-            f"{store.name}의 {year_week} 리뷰 {reviews.count()}개 요약 생성 중..."
-        )
+        self.stdout.write(f"{store.name}의 {week_number}주차 리뷰 {reviews.count()}개 요약 생성 중...")
 
-        # 리뷰 통계 계산
-        ratings = [r.rating for r in reviews]
-        avg_rating = round(sum(ratings) / len(ratings), 1)
+        # year 도출
+        first = reviews.order_by('review_date').first()
+        year = first.review_date.isocalendar()[0]
+
+        active_reviews = list(reviews)
+        ratings = [r.rating for r in active_reviews]
+        average = round(sum(ratings) / len(ratings), 1)
 
         sentiments = defaultdict(int)
-        for r in reviews:
+        for r in active_reviews:
             sentiments[r.sentiment] += 1
 
-        all_keywords = []
-        for r in reviews:
-            all_keywords.extend(r.keywords)
         keyword_counts = defaultdict(int)
-        for kw in all_keywords:
-            keyword_counts[kw] += 1
-        top_keywords = sorted(keyword_counts.items(), key=lambda x: -x[1])[:5]
-        top_keywords = [{"keyword": kw, "count": cnt} for kw, cnt in top_keywords]
+        positive_keyword_counts = defaultdict(int)
+        negative_keyword_counts = defaultdict(int)
+        for r in active_reviews:
+            for kw in r.keywords:
+                keyword_counts[kw] += 1
+                if r.sentiment == "positive":
+                    positive_keyword_counts[kw] += 1
+                elif r.sentiment == "negative":
+                    negative_keyword_counts[kw] += 1
 
-        # 전주 평점과 비교
-        prev_summary = (
-            WeeklySummary.objects.filter(store=store, year_week__lt=year_week)
-            .order_by("-year_week")
-            .first()
-        )
-        rating_change = 0.0
-        if prev_summary:
-            rating_change = round(avg_rating - prev_summary.avg_rating, 1)
+        top_pos_kw = ", ".join(k for k, _ in sorted(positive_keyword_counts.items(), key=lambda x: -x[1])[:5]) or "없음"
+        top_neg_kw = ", ".join(k for k, _ in sorted(negative_keyword_counts.items(), key=lambda x: -x[1])[:5]) or "없음"
 
-        # 리뷰 텍스트 모아서 요약 시도
-        review_texts = [r.content for r in reviews]
-
-        api_key = settings.OPENAI_API_KEY
+        review_texts = [r.content for r in active_reviews]
+        api_key = getattr(settings, "GEMINI_API_KEY", None)
         if api_key:
-            summary_text, highlights = self._generate_with_openai(
-                api_key, store.name, year_week, review_texts, avg_rating, sentiments
+            summary_text = self._generate_with_gemini(
+                api_key, store.name, week_number, review_texts, average, sentiments, top_pos_kw, top_neg_kw
             )
         else:
-            self.stdout.write(
-                self.style.WARNING(
-                    "OpenAI API 키가 없습니다. 더미 요약을 생성합니다."
-                )
-            )
-            summary_text, highlights = self._generate_dummy(
-                store.name, year_week, avg_rating, sentiments, top_keywords, rating_change
-            )
+            self.stdout.write(self.style.WARNING("Gemini API 키가 없습니다. 더미 요약을 생성합니다."))
+            summary_text = self._generate_dummy(store.name, week_number, average, sentiments, top_pos_kw, top_neg_kw)
 
-        # WeeklySummary 저장 (upsert)
-        summary, created = WeeklySummary.objects.update_or_create(
-            store=store,
-            year_week=year_week,
+        swr, was_created = ShopWeekReview.objects.update_or_create(
+            shop=store,
+            year=year,
+            week_number=week_number,
             defaults={
-                "summary": summary_text,
-                "highlights": highlights,
-                "avg_rating": avg_rating,
-                "review_count": reviews.count(),
-                "sentiment_distribution": dict(sentiments),
-                "top_keywords": top_keywords,
-                "rating_change": rating_change,
+                "count": len(active_reviews),
+                "average": average,
+                "positive_count": sentiments.get("positive", 0),
+                "negative_count": sentiments.get("negative", 0),
+                "neutral_count": sentiments.get("neutral", 0),
             },
         )
 
-        action = "생성" if created else "업데이트"
-        self.stdout.write(
-            self.style.SUCCESS(f"주별 요약이 {action}되었습니다: {summary}")
-        )
+        if isinstance(summary_text, dict):
+            positive_contents = summary_text.get("positive_contents", [])
+            negative_contents = summary_text.get("negative_contents", [])
+            overall = summary_text.get("summary", "")
+        else:
+            positive_contents = []
+            negative_contents = []
+            overall = summary_text
 
-    def _generate_with_openai(
-        self, api_key, store_name, year_week, review_texts, avg_rating, sentiments
-    ):
-        """OpenAI GPT-4o-mini로 요약 생성"""
+        swr.summary = overall
+        swr.save(update_fields=["summary"])
+
+        for content_val in positive_contents:
+            ShopWeekSentimentReveiw.objects.create(
+                shop_week_review=swr,
+                sentiment="positive",
+                content=content_val,
+                created_at=swr.updated_at,
+            )
+        for content_val in negative_contents:
+            ShopWeekSentimentReveiw.objects.create(
+                shop_week_review=swr,
+                sentiment="negative",
+                content=content_val,
+                created_at=swr.updated_at,
+            )
+
+        swr.review_keywords.all().delete()
+        for word, cnt in keyword_counts.items():
+            keyword_obj, _ = Keyword.objects.get_or_create(word=word)
+            ShopWeekReviewKeyword.objects.create(
+                shop_week_review=swr, keyword=keyword_obj, count=cnt
+            )
+
+        action = "생성" if was_created else "업데이트"
+        self.stdout.write(self.style.SUCCESS(
+            f"ShopWeekReview {action}됨: {store.name} {year}-W{week_number:02d}"
+        ))
+
+    def _generate_with_gemini(self, api_key, store_name, week_number, review_texts, average, sentiments, top_pos_kw, top_neg_kw):
         try:
-            from openai import OpenAI
+            import google.generativeai as genai
 
-            client = OpenAI(api_key=api_key)
+            # 실제 리뷰 텍스트 샘플 (최대 15건, 비어있는 것 제외)
+            non_empty = [t for t in review_texts if t and t.strip()]
+            sample_texts = non_empty[:15]
+            sample_block = "\n".join(f"- {t}" for t in sample_texts) if sample_texts else "리뷰 텍스트 없음"
 
-            reviews_block = "\n".join(f"- {text}" for text in review_texts[:30])
-            total = sum(sentiments.values()) or 1
-            pos_pct = round(sentiments.get("positive", 0) / total * 100)
-            neg_pct = round(sentiments.get("negative", 0) / total * 100)
+            system_instruction = (
+                "당신은 음식점 리뷰 분석 전문가입니다. "
+                "반드시 아래 제공된 실제 리뷰 텍스트를 직접 읽고 분석하세요. "
+                "절대 금지: 별점·건수·긍정/부정/중립 비율 등 수치를 그대로 서술하는 것. "
+                "화면에 이미 표시된 통계 수치를 단순 반복하지 마세요. "
+                "대신: 리뷰 텍스트에서만 발견할 수 있는 패턴, 반복되는 맥락, 고객 경험의 본질을 분석하세요."
+            )
 
-            prompt = f"""다음은 '{store_name}'의 {year_week} 리뷰들입니다.
+            prompt = f"""가게: {store_name} ({week_number}주차)
 
-리뷰 목록:
-{reviews_block}
+[실제 리뷰 샘플]
+{sample_block}
 
-통계:
-- 평균 평점: {avg_rating}/5.0
-- 긍정 리뷰: {pos_pct}%
-- 부정 리뷰: {neg_pct}%
+[상위 키워드]
+- 긍정: {top_pos_kw}
+- 부정: {top_neg_kw}
 
-아래 JSON 형식으로 응답해주세요:
+아래 JSON 형식으로만 응답해주세요.
+positive_contents 와 negative_contents 는 빈 리스트 값이 될 수 있습니다.
 {{
-  "summary": "3-4문장의 종합 요약",
-  "highlights": {{
-    "good_points": ["좋은 점 1", "좋은 점 2"],
-    "bad_points": ["아쉬운 점 1", "아쉬운 점 2"]
-  }}
+  "summary": "이 가게만의 특색과 고객이 반복적으로 언급하는 핵심 경험을 3문장으로. 수치 언급 절대 금지.",
+  "positive_contents": ["고객이 칭찬하는 구체적 이유와 맥락1", "고객이 칭찬하는 구체적 이유와 맥락2"],
+  "negative_contents": ["고객 불만의 구체적 맥락1", "반복 요청되는 개선 포인트2"]
 }}"""
 
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "당신은 음식점 리뷰 분석 전문가입니다. 한국어로 응답하세요.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.7,
-                max_tokens=500,
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(
+                model_name="gemini-2.0-flash",
+                system_instruction=system_instruction,
             )
-
-            result = json.loads(response.choices[0].message.content)
-            return result["summary"], result["highlights"]
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=600,
+                    response_mime_type="application/json",
+                ),
+            )
+            raw = response.text
+            return json.loads(raw)
 
         except Exception as e:
-            self.stderr.write(f"OpenAI API 오류: {e}")
+            self.stderr.write(f"Gemini API 오류: {e}")
             self.stdout.write("더미 요약으로 대체합니다.")
-            return self._generate_dummy(
-                store_name,
-                year_week,
-                avg_rating,
-                sentiments,
-                [],
-                0.0,
-            )
+            return self._generate_dummy(store_name, week_number, average, sentiments, top_pos_kw, top_neg_kw)
 
-    def _generate_dummy(
-        self, store_name, year_week, avg_rating, sentiments, top_keywords, rating_change
-    ):
-        """더미 요약 생성 (OpenAI 없을 때)"""
-        pos = sentiments.get("positive", 0)
-        neg = sentiments.get("negative", 0)
-        total = sum(sentiments.values()) or 1
-        kw_text = ", ".join(kw["keyword"] for kw in top_keywords[:3]) if top_keywords else "맛, 서비스, 배달"
-
+    def _generate_dummy(self, store_name, week_number, average, sentiments, top_pos_kw, top_neg_kw):
         summary = (
-            f"{store_name}의 {year_week} 리뷰 분석 결과, "
-            f"평균 평점 {avg_rating}점으로 "
-            f"긍정 리뷰가 {round(pos/total*100)}%, "
-            f"부정 리뷰가 {round(neg/total*100)}%를 차지합니다. "
-            f"주요 키워드는 '{kw_text}'입니다."
+            f"{store_name}의 {week_number}주차 리뷰를 분석한 결과, "
+            f"평균 평점 {average}점을 기록했습니다. "
+            f"고객들은 {top_pos_kw} 등을 주로 긍정적으로 평가했으며, "
+            f"{top_neg_kw} 관련 의견도 확인되었습니다."
         )
-
-        good_points = []
-        bad_points = []
-
-        if pos / total > 0.5:
-            good_points.append("전반적으로 긍정적인 평가가 우세합니다.")
-        if rating_change > 0:
-            good_points.append("평점이 상승 추세에 있습니다.")
-        if not good_points:
-            good_points.append("일부 긍정적인 리뷰가 있습니다.")
-
-        if neg / total > 0.3:
-            bad_points.append("부정 리뷰 비율이 높아 개선이 필요합니다.")
-        if rating_change < 0:
-            bad_points.append("평점이 하락 추세입니다.")
-        if not bad_points:
-            bad_points.append("지속적인 모니터링이 필요합니다.")
-
-        highlights = {
-            "good_points": good_points,
-            "bad_points": bad_points,
+        pos_contents = [f"{top_pos_kw} 등이 긍정적으로 언급되었습니다."] if top_pos_kw != "없음" else []
+        neg_contents = [f"{top_neg_kw} 관련 개선 의견이 있었습니다."] if top_neg_kw != "없음" else []
+        return {
+            "summary": summary,
+            "positive_contents": pos_contents,
+            "negative_contents": neg_contents,
         }
-
-        return summary, highlights

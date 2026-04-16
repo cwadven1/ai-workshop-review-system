@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ReviewTime - 분석 주기</title>
 <style>
+  html { font-size: 20px; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
+    word-break: keep-all;
     font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #f5f5f5;
     min-height: 100vh;
@@ -121,24 +123,14 @@
 <body>
   <div class="header">
     <div class="logo">REVIEWTIME</div>
-    <h1>월별 종합 + 주별 실시간 모니터링</h1>
-    <p>ISO 8601 기준 이중 분석 주기</p>
+    <h1>주별 실시간 모니터링</h1>
+    <p>ISO 8601 기준 주별 분석 주기</p>
   </div>
 
   <div class="cycle-types">
-    <div class="cycle-card cycle-monthly">
-      <h2>📅 월별 분석</h2>
-      <p class="desc">1월~12월, 월 마감 후 해당 월 전체 리뷰를 확정 분석합니다.</p>
-      <div class="cycle-detail">
-        <div class="cycle-item"><span class="cycle-icon">🎯</span> 종합 성과 평가</div>
-        <div class="cycle-item"><span class="cycle-icon">📊</span> 전월 / 전년 동월 비교</div>
-        <div class="cycle-item"><span class="cycle-icon">✅</span> 리뷰 수 많아 높은 신뢰도</div>
-        <div class="cycle-item"><span class="cycle-icon">🔒</span> 월 마감 후 확정 분석</div>
-      </div>
-    </div>
     <div class="cycle-card cycle-weekly">
       <h2>⚡ 주별 분석</h2>
-      <p class="desc">ISO 8601 기준 월요일 시작, 진행 중인 달의 실시간 추이를 모니터링합니다.</p>
+      <p class="desc">ISO 8601 기준 월요일 시작, 주별 실시간 추이를 모니터링합니다.</p>
       <div class="cycle-detail">
         <div class="cycle-item"><span class="cycle-icon">📈</span> 실시간 추이 모니터링</div>
         <div class="cycle-item"><span class="cycle-icon">🚨</span> 급변 감지 → 즉시 알림</div>
@@ -151,8 +143,6 @@
   <h2 class="section-title">분석 흐름</h2>
   <div class="cycle-flow-wrap">
     <div class="cycle-flow">
-      <div class="cf-node cf-m">3월 월별 분석<small>3/1~3/31 확정</small></div>
-      <div class="cf-arrow">→</div>
       <div class="cf-node cf-w">W13<small>3/30~4/5 · 3.0점</small></div>
       <div class="cf-arrow">→</div>
       <div class="cf-node cf-w">W14<small>4/6~4/12 · 3.5점</small></div>
@@ -160,13 +150,9 @@
       <div class="cf-node cf-w">W15<small>4/13~4/19 · 4.5점</small></div>
       <div class="cf-arrow">→</div>
       <div class="cf-node cf-w">W16<small>4/20~4/26 · 5.0점</small></div>
-      <div class="cf-arrow">→</div>
-      <div class="cf-node cf-r">4월 월별 분석<small>4월 전체 확정</small></div>
     </div>
     <div class="legend-row">
-      <div class="legend-item"><div class="legend-dot" style="border-color:#6C5CE7;"></div> 월별 분석</div>
       <div class="legend-item"><div class="legend-dot" style="border-color:#FA0050;"></div> 주별 분석</div>
-      <div class="legend-item"><div class="legend-dot" style="border-color:#00B894;"></div> 월별 확정</div>
     </div>
   </div>
 
@@ -220,7 +206,6 @@
         <tbody>
           <tr><td>주차 기준</td><td>월요일 시작</td><td>ISO 8601 표준, 영업일 기준 자연스러움</td></tr>
           <tr><td>분석 타이밍</td><td>배치 (수동 트리거)</td><td>프로토타입 단계, 추후 cron 추가 가능</td></tr>
-          <tr><td>월/주 겹침 처리</td><td>더 많은 날이 속한 월로 귀속</td><td>4/28~5/4 → 4월 5주차 (4일 &gt; 3일)</td></tr>
           <tr><td>AI 총평 원칙</td><td>원인 분석만, 통계 수치 배제</td><td>수치는 차트로, 총평은 "왜" 변했는지에 집중</td></tr>
           <tr><td>최근 분석 기간</td><td>최근 4주 (W13~W16)</td><td>단기 트렌드 파악에 최적</td></tr>
         </tbody>

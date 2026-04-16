@@ -4,16 +4,24 @@ from collections import Counter
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, render
 
-from reviews.models import Review, WeeklySummary
+from reviews.models import Review
 
-from .models import Menu, Store
+from .models import Menu, ShopRecentReview, ShopRecentReviewSentiment, ShopWeekReview, ShopWeekSentimentReveiw, Store
+
+
+def _get_current_info(swr):
+    """ShopWeekReview.updated_at과 created_at이 일치하는 최신 ShopWeekSentimentReveiw 반환"""
+    for info in swr.infos.all():
+        if info.created_at == swr.updated_at:
+            return info
+    return swr.infos.order_by('-created_at').first()
 
 
 def _compute_trend(recent_summaries):
     if len(recent_summaries) < 2:
         return 'neutral'
-    latest = float(recent_summaries[0].avg_rating)
-    prev = float(recent_summaries[1].avg_rating)
+    latest = float(recent_summaries[0].average)
+    prev = float(recent_summaries[1].average)
     if round(latest - prev, 1) >= 0.1:
         return 'up'
     elif round(prev - latest, 1) >= 0.1:
@@ -27,8 +35,8 @@ def index(request):
     trend_filter = request.GET.get('trend', '').strip()
 
     weekly_prefetch = Prefetch(
-        'weekly_summaries',
-        queryset=WeeklySummary.objects.order_by('-year_week'),
+        'shop_week_reviews',
+        queryset=ShopWeekReview.objects.order_by('-year', '-week_number'),
         to_attr='prefetched_summaries',
     )
     stores = Store.objects.prefetch_related(weekly_prefetch)
@@ -55,8 +63,8 @@ def index(request):
             'mini_data': mini_data,
         })
         sparkline_data[str(store.pk)] = {
-            'labels': [s.year_week for s in mini_data],
-            'data': [float(s.avg_rating) for s in mini_data],
+            'labels': [s.week_number for s in mini_data],
+            'data': [float(s.average) for s in mini_data],
             'trend': trend,
         }
 
@@ -89,52 +97,68 @@ def index(request):
     })
 
 
-
 def _build_weekly_data(store):
     summaries = list(
-        WeeklySummary.objects.filter(store=store).order_by("-year_week")
+        ShopWeekReview.objects.filter(shop=store)
+        .prefetch_related('review_keywords__keyword')
+        .order_by("-year", "-week_number")
     )
 
-    for summary in summaries:
-        dist = summary.sentiment_distribution or {}
-        dist.setdefault("positive", 0)
-        dist.setdefault("neutral", 0)
-        dist.setdefault("negative", 0)
-        summary.sentiment_distribution = dist
-        summary.sentiment_total = sum(dist.values()) or 1
+    for swr in summaries:
+        dist = {
+            'positive': swr.positive_count,
+            'neutral': swr.neutral_count,
+            'negative': swr.negative_count,
+        }
+        swr.sentiment_distribution = dist
+        swr.sentiment_total = sum(dist.values()) or 1
+        swr.top_keywords = [
+            {'keyword': rk.keyword.word, 'count': rk.count}
+            for rk in swr.review_keywords.all()
+        ]
 
-    year_weeks = [s.year_week for s in summaries]
+    week_numbers = [s.week_number for s in summaries]
     all_reviews = list(
-        Review.objects.filter(store=store, year_week__in=year_weeks)
+        Review.objects.filter(store=store, week__in=week_numbers)
         .order_by("-review_date")
     )
     reviews_by_week = {}
     for review in all_reviews:
-        reviews_by_week.setdefault(review.year_week, []).append(review)
+        reviews_by_week.setdefault(review.week, []).append(review)
 
     weekly_data = []
-    for summary in summaries:
+    for swr in summaries:
         weekly_data.append({
-            "summary": summary,
-            "reviews": reviews_by_week.get(summary.year_week, [])[:5],
+            "summary": swr,
+            "reviews": reviews_by_week.get(swr.week_number, [])[:5],
         })
+
+    # 이전 주차 대비 평점 diff 계산 (내림차순이므로 [i+1]이 이전 주)
+    for i, item in enumerate(weekly_data):
+        if i + 1 < len(weekly_data):
+            curr = float(item['summary'].average)
+            prev = float(weekly_data[i + 1]['summary'].average)
+            item['diff'] = round(curr - prev, 1)
+            item['has_diff'] = True
+        else:
+            item['diff'] = None
+            item['has_diff'] = False
 
     return weekly_data
 
 
 def _build_recent_analysis(store, weekly_data):
-    """최근 4주 데이터를 기반으로 분석 요약 생성"""
     if not weekly_data:
         return None
 
     recent_weeks = weekly_data[:4]
 
-    total_reviews = sum(m['summary'].review_count for m in recent_weeks)
+    total_reviews = sum(m['summary'].count for m in recent_weeks)
     if total_reviews == 0:
         return None
 
     weighted_rating = sum(
-        float(m['summary'].avg_rating) * m['summary'].review_count
+        float(m['summary'].average) * m['summary'].count
         for m in recent_weeks
     ) / total_reviews
 
@@ -151,23 +175,22 @@ def _build_recent_analysis(store, weekly_data):
 
     trend = 'neutral'
     if len(recent_weeks) >= 2:
-        r1 = float(recent_weeks[0]['summary'].avg_rating)
-        r2 = float(recent_weeks[1]['summary'].avg_rating)
+        r1 = float(recent_weeks[0]['summary'].average)
+        r2 = float(recent_weeks[1]['summary'].average)
         if r1 - r2 >= 0.2:
             trend = 'up'
         elif r2 - r1 >= 0.2:
             trend = 'down'
 
-    period = f"{recent_weeks[-1]['summary'].year_week} ~ {recent_weeks[0]['summary'].year_week}"
+    period = f"{recent_weeks[-1]['summary'].week_number}주차 ~ {recent_weeks[0]['summary'].week_number}주차"
 
-    # 기간 종합 요약 텍스트 생성
     store_name = store.name
     avg_r = round(weighted_rating, 1)
     pos_pct = round(pos / total_sent * 100)
     neg_pct = round(neg / total_sent * 100)
 
-    oldest_rating = float(recent_weeks[-1]['summary'].avg_rating)
-    latest_rating = float(recent_weeks[0]['summary'].avg_rating)
+    oldest_rating = float(recent_weeks[-1]['summary'].average)
+    latest_rating = float(recent_weeks[0]['summary'].average)
     rating_diff = latest_rating - oldest_rating
 
     if rating_diff >= 1.0:
@@ -209,7 +232,6 @@ def _build_recent_analysis(store, weekly_data):
 
 
 def _build_all_keywords(store):
-    """전체 리뷰 keywords 배열을 집계하여 상위 키워드 반환"""
     all_reviews = Review.objects.filter(store=store).exclude(keywords__isnull=True)
     kw_counter = Counter()
     for review in all_reviews:
@@ -229,26 +251,35 @@ def store_reviews(request, store_id):
     })
 
 
+def _get_recent_sentiments(store):
+    """ShopRecentReview 최신 1건의 sentiments를 {type: content} 딕셔너리로 반환"""
+    srr = ShopRecentReview.objects.filter(shop=store).order_by('-created_at').first()
+    if not srr:
+        return None, None
+    sentiments = {s.sentiment: s.content for s in srr.sentiments.all()}
+    return srr, sentiments
+
+
 def store_timeline(request, store_id):
     store = get_object_or_404(Store, pk=store_id)
     q = request.GET.get('q', '').strip()
 
+    srr, recent_sentiments = _get_recent_sentiments(store)
+
     if q:
         import json as _json
         from django.db.models import Q
-        # SQLite JSONField stores Korean as unicode escapes (e.g. \uc2e0\uc120\ud55c)
-        # so we must search using the same escaped form
         q_escaped = _json.dumps(q, ensure_ascii=True)[1:-1]
         reviews_qs = Review.objects.filter(
             Q(store=store) & (Q(content__icontains=q) | Q(keywords__icontains=q_escaped))
-        ).order_by('-year_week', '-review_date')
+        ).order_by('-week', '-review_date')
 
         grouped_dict = {}
         for r in reviews_qs:
-            grouped_dict.setdefault(r.year_week, []).append(r)
+            grouped_dict.setdefault(r.week, []).append(r)
         search_grouped = [
-            {'year_week': yw, 'reviews': revs}
-            for yw, revs in grouped_dict.items()
+            {'week': w, 'reviews': revs}
+            for w, revs in grouped_dict.items()
         ]
         search_total = sum(len(g['reviews']) for g in search_grouped)
 
@@ -263,6 +294,8 @@ def store_timeline(request, store_id):
             'search_total': search_total,
             'weekly_data': [],
             'recent_analysis': recent_analysis,
+            'recent_sentiments': recent_sentiments,
+            'srr': srr,
             'all_top_keywords': all_top_keywords,
             'chart_data_json': '[]',
         }
@@ -271,13 +304,12 @@ def store_timeline(request, store_id):
         recent_analysis = _build_recent_analysis(store, weekly_data)
         all_top_keywords = _build_all_keywords(store)
 
-        # 차트용 데이터: 오래된 주차 → 최근 순으로 정렬
         chart_weeks = list(reversed(weekly_data))
         chart_data = [
             {
-                'label': item['summary'].year_week,
-                'score': float(item['summary'].avg_rating),
-                'reviews': item['summary'].review_count,
+                'label': item['summary'].week_number,
+                'score': float(item['summary'].average),
+                'reviews': item['summary'].count,
             }
             for item in chart_weeks
         ]
@@ -289,6 +321,8 @@ def store_timeline(request, store_id):
             'search_total': 0,
             'weekly_data': weekly_data,
             'recent_analysis': recent_analysis,
+            'recent_sentiments': recent_sentiments,
+            'srr': srr,
             'all_top_keywords': all_top_keywords,
             'chart_data_json': json.dumps(chart_data, ensure_ascii=False),
         }

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReviewTime - 로드맵</title>
+<style>
+  html { font-size: 20px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    word-break: keep-all;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+
+  .header { text-align: center; margin-bottom: 60px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; font-weight: 800; color: #222; margin-bottom: 8px; }
+  .header p { font-size: 0.9rem; color: #888; }
+
+  /* Timeline wrapper */
+  .timeline {
+    max-width: 860px;
+    margin: 0 auto 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  /* Vertical line */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 52px;
+    top: 28px;
+    bottom: 28px;
+    width: 3px;
+    background: linear-gradient(to bottom, #6C5CE7, #FA0050, #00B894);
+    border-radius: 4px;
+  }
+
+  /* Phase card */
+  .phase-card {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    padding: 0 0 48px 0;
+    position: relative;
+  }
+  .phase-card:last-child { padding-bottom: 0; }
+
+  /* Phase badge (circle on timeline) */
+  .phase-badge {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 3px solid transparent;
+    position: relative;
+    z-index: 1;
+  }
+  .phase-badge .phase-num {
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .phase-1 .phase-badge { background: #F0EDFF; border-color: #6C5CE7; color: #6C5CE7; }
+  .phase-2 .phase-badge { background: #FFF5F7; border-color: #FA0050; color: #FA0050; }
+  .phase-3 .phase-badge { background: #EAFAF5; border-color: #00B894; color: #00B894; }
+
+  /* Phase content box */
+  .phase-body {
+    flex: 1;
+    background: #fff;
+    border-radius: 20px;
+    padding: 28px 32px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.06);
+    border-left: 5px solid transparent;
+  }
+  .phase-1 .phase-body { border-left-color: #6C5CE7; }
+  .phase-2 .phase-body { border-left-color: #FA0050; }
+  .phase-3 .phase-body { border-left-color: #00B894; }
+
+  .phase-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .phase-1 .phase-label { color: #6C5CE7; }
+  .phase-2 .phase-label { color: #FA0050; }
+  .phase-3 .phase-label { color: #00B894; }
+
+  .phase-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #222;
+    margin-bottom: 14px;
+  }
+
+  .phase-desc {
+    font-size: 0.88rem;
+    color: #666;
+    line-height: 1.75;
+    margin-bottom: 20px;
+  }
+
+  /* Feature chips inside each phase */
+  .feature-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .feature-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 30px;
+    border: 1.5px solid transparent;
+  }
+  .phase-1 .feature-chip { background: #F4F2FF; border-color: #C8BFFF; color: #5A4CC7; }
+  .phase-2 .feature-chip { background: #FFF0F3; border-color: #FFBDCB; color: #C7003A; }
+  .phase-3 .feature-chip { background: #E6FAF4; border-color: #A3E8D2; color: #007A5E; }
+
+  /* ── Animation ── */
+  .anim-phase {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+    pointer-events: none;
+  }
+  .anim-phase.revealed {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  /* Nav */
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 860px;
+    margin: 0 auto 16px;
+  }
+  .nav a.back {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: #aaa;
+    border: 2px solid #ddd;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav a.back:hover { background: #f0f0f0; color: #666; }
+
+  /* Step dots */
+  .step-dots {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .step-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ddd;
+    transition: background 0.3s, transform 0.3s;
+  }
+  .step-dot.active {
+    background: #FA0050;
+    transform: scale(1.3);
+  }
+
+  #next-btn {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: #FA0050;
+    border: 2px solid #FA0050;
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
+  }
+  #next-btn:hover { background: #FA0050; color: #fff; }
+
+  .page-indicator {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #bbb;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">ROADMAP</div>
+    <h1>개발 로드맵</h1>
+    <p>리뷰 인사이트 기능의 단계별 확장 계획</p>
+  </div>
+
+  <div class="timeline">
+
+    <!-- Phase 1 -->
+    <div class="phase-card phase-1 anim-phase" id="phase-1">
+      <div class="phase-badge">
+        <span style="font-size:0.6rem; font-weight:700; letter-spacing:0.5px;">Phase</span>
+        <span class="phase-num">1</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-label">Phase 1</div>
+        <div class="phase-title">리뷰 주차별 평점 그래프화</div>
+        <div class="phase-desc">
+          주 단위로 수집된 리뷰 평점 데이터를 시각적 그래프로 변환합니다.<br>
+          평점 흐름을 한눈에 파악해 가게 컨디션을 빠르게 진단할 수 있습니다.
+        </div>
+        <div class="feature-list">
+          <div class="feature-chip">📊 주차별 평점 추이 차트</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase-card phase-2 anim-phase" id="phase-2">
+      <div class="phase-badge">
+        <span style="font-size:0.6rem; font-weight:700; letter-spacing:0.5px;">Phase</span>
+        <span class="phase-num">2</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-label">Phase 2</div>
+        <div class="phase-title">리뷰 주차별 요약 &amp; 증감 이유</div>
+        <div class="phase-desc">
+          주차별 리뷰 내용을 자동 요약하고, 평점 증감의 원인을 분석해 제공합니다.<br>
+          단순 수치 변화가 아닌 왜 변했는지의 맥락을 전달합니다.
+        </div>
+        <div class="feature-list">
+          <div class="feature-chip">📝 주차별 리뷰 자동 요약</div>
+          <div class="feature-chip">🔺 평점 상승 원인 분석</div>
+          <div class="feature-chip">🔻 평점 하락 원인 분석</div>
+          <div class="feature-chip">💬 대표 리뷰 인용</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase-card phase-3 anim-phase" id="phase-3">
+      <div class="phase-badge">
+        <span style="font-size:0.6rem; font-weight:700; letter-spacing:0.5px;">Phase</span>
+        <span class="phase-num">3</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-label">Phase 3</div>
+        <div class="phase-title">리뷰 키워드화</div>
+        <div class="phase-desc">
+          리뷰 텍스트에서 반복 등장하는 핵심 키워드를 추출하고 분류합니다.<br>
+          긍정·부정 키워드를 구분해 소비자가 자주 언급하는 경험 요소를 식별합니다.
+        </div>
+        <div class="feature-list">
+          <div class="feature-chip">🏷️ 핵심 키워드 추출</div>
+          <div class="feature-chip">😊 긍정 키워드 분류</div>
+          <div class="feature-chip">😟 부정 키워드 분류</div>
+          <div class="feature-chip">🔍 키워드 필터 검색</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="nav">
+    <a href="06-stakeholder.html" class="back">&larr; 이전</a>
+    <div class="step-dots">
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <button id="next-btn">다음 &rarr;</button>
+  </div>
+  <div class="page-indicator">3 / 3</div>
+
+  <script>
+    let step = 0;
+    const phases = [
+      document.getElementById('phase-1'),
+      document.getElementById('phase-2'),
+      document.getElementById('phase-3')
+    ];
+    const dots = document.querySelectorAll('.step-dot');
+    const btn = document.getElementById('next-btn');
+
+    function advance() {
+      if (step < phases.length) {
+        const el = phases[step];
+        el.classList.add('revealed');
+        dots[step].classList.add('active');
+        step++;
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+        if (step === phases.length) {
+          btn.textContent = '데모 보기 →';
+        }
+      } else {
+        window.location.href = '08-demo.html';
+      }
+    }
+
+    btn.addEventListener('click', advance);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter') {
+        e.preventDefault();
+        advance();
+      }
+    });
+  </script>
+</body>
+</html>

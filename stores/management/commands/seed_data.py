@@ -4,11 +4,11 @@ from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
 
-from reviews.models import Review, WeeklySummary
-from stores.models import Menu, Store
+from reviews.models import Review
+from stores.models import Keyword, Menu, ShopRecentReview, ShopRecentReviewSentiment, ShopWeekReview, ShopWeekSentimentReveiw, ShopWeekReviewKeyword, Store
 
 
-# 최근 N주 연주차 리스트 생성 (예: ["2025-W10", ..., "2025-W21"])
+# 최근 N주 (year, week_num) 튜플 리스트 생성
 def get_recent_weeks(count=12):
     today = date.today()
     weeks = []
@@ -16,10 +16,10 @@ def get_recent_weeks(count=12):
     d = today
     while len(weeks) < count:
         iso = d.isocalendar()
-        yw = f"{iso[0]}-W{iso[1]:02d}"
-        if yw not in seen:
-            weeks.insert(0, yw)
-            seen.add(yw)
+        key = (iso[0], iso[1])
+        if key not in seen:
+            weeks.insert(0, key)
+            seen.add(key)
         d -= timedelta(days=7)
     return weeks
 
@@ -196,9 +196,9 @@ STORES_DATA = [
             {"name": "마라샹궈", "price": 15000, "is_popular": True, "description": ""},
             {"name": "탕후루", "price": 5000, "is_popular": False, "description": ""},
         ],
-        # 마라 트렌드로 초반 대호평, 최근 4주 급격한 품질 하락
-        "rating_pattern": [4.5, 4.6, 4.7, 4.8, 4.8, 4.7, 4.6, 4.5, 2.8, 2.5, 2.3, 2.2],
-        "review_counts_override": [15, 18, 20, 25, 25, 20, 18, 15, 5, 5, 5, 5],
+        # 마라 트렌드로 꾸준한 상승세, 최근 3주 급격한 품질 하락
+        "rating_pattern": [3.8, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 2.5, 2.3, 2.0],
+        "review_counts_override": [12, 14, 15, 17, 18, 20, 22, 23, 25, 20, 12, 6],
     },
     {
         "name": "르 스테이크",
@@ -422,7 +422,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("기존 데이터 삭제 중...")
-        WeeklySummary.objects.all().delete()
+        ShopRecentReview.objects.all().delete()
+        ShopWeekReview.objects.all().delete()
         Review.objects.all().delete()
         Menu.objects.all().delete()
         Store.objects.all().delete()
@@ -458,7 +459,7 @@ class Command(BaseCommand):
             else:
                 review_counts_per_week = [random.randint(5, 8) for _ in range(len(weeks))]
 
-            for i, yw in enumerate(weeks):
+            for i, (year_num, week_num) in enumerate(weeks):
                 target_rating = pattern[i]
                 review_count = review_counts_per_week[i]
 
@@ -468,9 +469,8 @@ class Command(BaseCommand):
                     sentiment, content, keywords = self._generate_review_content(
                         store_data["category"], rating
                     )
-                    year_str, week_str = yw.split("-W")
                     day_of_week = random.randint(1, 7)
-                    review_date = date.fromisocalendar(int(year_str), int(week_str), day_of_week)
+                    review_date = date.fromisocalendar(year_num, week_num, day_of_week)
 
                     # 각 주 첫 번째 리뷰에만 이미지 1장 첨부
                     if j == 0:
@@ -485,8 +485,7 @@ class Command(BaseCommand):
                         sentiment=sentiment,
                         sentiment_score=self._sentiment_score(sentiment),
                         keywords=keywords,
-                        year_month=review_date.strftime("%Y-%m"),
-                        year_week=yw,
+                        week=week_num,
                         review_date=review_date,
                         source="yogiyo",
                         images=images,
@@ -494,8 +493,16 @@ class Command(BaseCommand):
                     weekly_reviews.append(review)
                     all_reviews.append(review)
 
-                # 주별 요약 생성
-                self._create_weekly_summary(store, yw, weekly_reviews)
+                # 주차별 집계 생성
+                self._create_shop_week_review(store, year_num, week_num, weekly_reviews)
+
+            # 최근 4주 리뷰로 ShopRecentReview 생성
+            recent_weeks = weeks[-4:]
+            start_date = date.fromisocalendar(recent_weeks[0][0], recent_weeks[0][1], 1)
+            end_date = date.fromisocalendar(recent_weeks[-1][0], recent_weeks[-1][1], 7)
+            recent_reviews = [r for r in all_reviews if start_date <= r.review_date <= end_date]
+            if recent_reviews:
+                self._create_shop_recent_review(store, recent_reviews)
 
             # 가게 전체 평균 업데이트
             total = len(all_reviews)
@@ -507,7 +514,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("시드 데이터 생성 완료!"))
         self.stdout.write(f"  가게: {Store.objects.count()}개")
         self.stdout.write(f"  리뷰: {Review.objects.count()}개")
-        self.stdout.write(f"  주별 요약: {WeeklySummary.objects.count()}개")
+        self.stdout.write(f"  주차별 집계: {ShopWeekReview.objects.count()}개")
+        self.stdout.write(f"  최근 리뷰 집계: {ShopRecentReview.objects.count()}개")
 
     def _generate_rating(self, target):
         """타겟 평점 주변으로 랜덤 평점 생성"""
@@ -545,105 +553,174 @@ class Command(BaseCommand):
             return round(random.uniform(-1.0, -0.4), 2)
         return round(random.uniform(-0.3, 0.3), 2)
 
-    def _create_weekly_summary(self, store, year_week, reviews):
-        """주별 요약 데이터 생성"""
+    # 키워드 감성 판별용 사전 (KEYWORDS_MAP 기반)
+    _ALL_POSITIVE_KWS = frozenset(
+        kw for cat_kws in KEYWORDS_MAP["positive"].values() for kw in cat_kws
+    )
+    _ALL_NEGATIVE_KWS = frozenset(
+        kw for cat_kws in KEYWORDS_MAP["negative"].values() for kw in cat_kws
+    )
+
+    def _create_shop_week_review(self, store, year, week_number, reviews):
+        """ShopWeekReview + ShopWeekSentimentReveiw + ShopWeekReviewKeyword 생성"""
         ratings = [r.rating for r in reviews]
-        avg_rating = round(sum(ratings) / len(ratings), 1) if ratings else 0
+        average = round(sum(ratings) / len(ratings), 1) if ratings else 0.0
 
         sentiments = defaultdict(int)
         for r in reviews:
             sentiments[r.sentiment] += 1
 
-        all_keywords = []
-        for r in reviews:
-            all_keywords.extend(r.keywords)
         keyword_counts = defaultdict(int)
-        for kw in all_keywords:
-            keyword_counts[kw] += 1
-        top_keywords = sorted(keyword_counts.items(), key=lambda x: -x[1])[:5]
-        top_keywords = [{"keyword": kw, "count": cnt} for kw, cnt in top_keywords]
+        for r in reviews:
+            for kw in r.keywords:
+                keyword_counts[kw] += 1
 
-        rating_change = 0.0
-        prev_summary = WeeklySummary.objects.filter(
-            store=store, year_week__lt=year_week
-        ).order_by('-year_week').first()
-        if prev_summary:
-            rating_change = round(avg_rating - float(prev_summary.avg_rating), 1)
-
-        summary_text = self._generate_dummy_summary(
-            store, year_week, avg_rating, sentiments, top_keywords, rating_change
-        )
-
-        highlights = self._generate_highlights(sentiments, top_keywords, rating_change)
-
-        WeeklySummary.objects.create(
-            store=store,
-            year_week=year_week,
-            summary=summary_text,
-            highlights=highlights,
-            avg_rating=avg_rating,
-            review_count=len(reviews),
-            sentiment_distribution=dict(sentiments),
-            top_keywords=top_keywords,
-            rating_change=rating_change,
-        )
-
-    def _generate_dummy_summary(
-        self, store, year_week, avg_rating, sentiments, top_keywords, rating_change
-    ):
-        """더미 AI 요약 텍스트 생성"""
         pos = sentiments.get("positive", 0)
         neg = sentiments.get("negative", 0)
         total = sum(sentiments.values()) or 1
-
-        kw_text = ", ".join(kw["keyword"] for kw in top_keywords[:3])
-
-        if rating_change > 0.5:
-            trend_text = "전주 대비 크게 상승한 평점으로 긍정적인 변화가 감지됩니다."
-        elif rating_change > 0:
-            trend_text = "전주 대비 소폭 상승하여 안정적인 호평을 유지하고 있습니다."
-        elif rating_change < -0.5:
-            trend_text = "전주 대비 평점이 하락하여 개선이 필요한 시점입니다."
-        elif rating_change < 0:
-            trend_text = "전주 대비 소폭 하락하였으나 큰 변동은 없습니다."
-        else:
-            trend_text = "전주와 비슷한 수준을 유지하고 있습니다."
-
-        return (
-            f"{store.name}의 {year_week} 리뷰 분석 결과, "
-            f"평균 평점 {avg_rating}점으로 "
+        kw_text = ", ".join(list(keyword_counts.keys())[:3])
+        summary_text = (
+            f"{store.name}의 {week_number}주차 리뷰 분석 결과, "
+            f"평균 평점 {average}점으로 "
             f"긍정 리뷰가 {round(pos/total*100)}%, "
             f"부정 리뷰가 {round(neg/total*100)}%를 차지합니다. "
-            f"{trend_text} "
             f"주요 키워드는 '{kw_text}'이(가) 언급되었습니다."
         )
 
-    def _generate_highlights(self, sentiments, top_keywords, rating_change):
-        """하이라이트 데이터 생성"""
+        swr = ShopWeekReview.objects.create(
+            shop=store,
+            year=year,
+            week_number=week_number,
+            count=len(reviews),
+            average=average,
+            positive_count=sentiments.get("positive", 0),
+            negative_count=sentiments.get("negative", 0),
+            neutral_count=sentiments.get("neutral", 0),
+            summary=summary_text,
+        )
+
+        # positive/negative/neutral 3개 sentiment 레코드 insert
+        pos_reviews = [r for r in reviews if r.sentiment == "positive"]
+        neg_reviews = [r for r in reviews if r.sentiment == "negative"]
+
+        pos_kws = list(dict.fromkeys(kw for r in pos_reviews for kw in r.keywords))[:3]
+        neg_kws = list(dict.fromkeys(kw for r in neg_reviews for kw in r.keywords))[:3]
+
+        if pos_reviews:
+            pos_content = (
+                f"{store.name}의 {week_number}주차 긍정 리뷰 분석: "
+                f"총 {len(pos_reviews)}건의 긍정 리뷰가 접수되었습니다. "
+                f"주요 키워드는 '{', '.join(pos_kws)}'이(가) 언급되었으며, "
+                f"맛, 서비스, 가성비에 대한 만족도가 높았습니다."
+            )
+        else:
+            pos_content = f"{store.name}의 {week_number}주차 긍정 리뷰가 없습니다."
+
+        if neg_reviews:
+            neg_content = (
+                f"{store.name}의 {week_number}주차 부정 리뷰 분석: "
+                f"총 {len(neg_reviews)}건의 부정 리뷰가 접수되었습니다. "
+                f"주요 불만 키워드는 '{', '.join(neg_kws)}'이(가) 언급되었으며, "
+                f"개선이 필요한 영역으로 파악됩니다."
+            )
+        else:
+            neg_content = f"{store.name}의 {week_number}주차 부정 리뷰가 없습니다."
+
+        ShopWeekSentimentReveiw.objects.create(
+            shop_week_review=swr,
+            sentiment="positive",
+            content=pos_content,
+            created_at=swr.updated_at,
+        )
+        ShopWeekSentimentReveiw.objects.create(
+            shop_week_review=swr,
+            sentiment="negative",
+            content=neg_content,
+            created_at=swr.updated_at,
+        )
+        ShopWeekSentimentReveiw.objects.create(
+            shop_week_review=swr,
+            sentiment="neutral",
+            content=summary_text,
+            created_at=swr.updated_at,
+        )
+
+        for word, cnt in keyword_counts.items():
+            if word in self._ALL_POSITIVE_KWS:
+                sentiment = "positive"
+            elif word in self._ALL_NEGATIVE_KWS:
+                sentiment = "negative"
+            else:
+                sentiment = "neutral"
+            keyword_obj, _ = Keyword.objects.get_or_create(
+                word=word, defaults={"sentiment": sentiment}
+            )
+            ShopWeekReviewKeyword.objects.create(
+                shop_week_review=swr,
+                keyword=keyword_obj,
+                count=cnt,
+            )
+
+    def _create_shop_recent_review(self, store, reviews):
+        """ShopRecentReview + ShopRecentReviewSentiment 3개 생성 (최근 4주 기준)"""
+        dates = [r.review_date for r in reviews]
+        ratings = [r.rating for r in reviews]
+        average = round(sum(ratings) / len(ratings), 1)
+
+        sentiments = defaultdict(int)
+        for r in reviews:
+            sentiments[r.sentiment] += 1
+
         pos = sentiments.get("positive", 0)
         neg = sentiments.get("negative", 0)
         total = sum(sentiments.values()) or 1
 
-        good_points = []
-        bad_points = []
+        summary_text = (
+            f"{store.name}의 최근 리뷰 분석 결과, "
+            f"평균 평점 {average}점으로 "
+            f"긍정 리뷰가 {round(pos/total*100)}%, "
+            f"부정 리뷰가 {round(neg/total*100)}%를 차지합니다. "
+            f"총 {len(reviews)}건의 리뷰가 분석되었습니다."
+        )
 
-        if pos / total > 0.5:
-            good_points.append("전반적으로 긍정적인 평가가 우세합니다.")
-        if rating_change > 0:
-            good_points.append("평점이 상승 추세에 있습니다.")
+        srr = ShopRecentReview.objects.create(
+            shop=store,
+            review_sample_start_date=min(dates),
+            review_sample_end_date=max(dates),
+            total_count=len(reviews),
+            positive_count=pos,
+            negative_count=neg,
+            neutral_count=sentiments.get("neutral", 0),
+            average=average,
+            summary=summary_text,
+        )
 
-        kw_names = [kw["keyword"] for kw in top_keywords[:2]]
-        if kw_names:
-            good_points.append(f"'{', '.join(kw_names)}' 관련 언급이 많습니다.")
+        pos_reviews = [r for r in reviews if r.sentiment == "positive"]
+        neg_reviews = [r for r in reviews if r.sentiment == "negative"]
 
-        if neg / total > 0.3:
-            bad_points.append("부정 리뷰 비율이 높아 개선이 필요합니다.")
-        if rating_change < -0.3:
-            bad_points.append("평점이 하락 추세여서 원인 파악이 필요합니다.")
-        if not bad_points:
-            bad_points.append("큰 불만 사항은 없으나 지속적 모니터링이 필요합니다.")
+        pos_kws = list(dict.fromkeys(kw for r in pos_reviews for kw in r.keywords))[:3]
+        neg_kws = list(dict.fromkeys(kw for r in neg_reviews for kw in r.keywords))[:3]
 
-        return {
-            "good_points": good_points,
-            "bad_points": bad_points,
-        }
+        pos_content = (
+            f"{store.name}의 최근 긍정 리뷰 분석: "
+            f"총 {len(pos_reviews)}건의 긍정 리뷰가 접수되었습니다. "
+            f"주요 키워드는 '{', '.join(pos_kws)}'이(가) 언급되었으며, "
+            f"맛, 서비스, 가성비에 대한 만족도가 높았습니다."
+        ) if pos_reviews else f"{store.name}의 최근 긍정 리뷰가 없습니다."
+
+        neg_content = (
+            f"{store.name}의 최근 부정 리뷰 분석: "
+            f"총 {len(neg_reviews)}건의 부정 리뷰가 접수되었습니다. "
+            f"주요 불만 키워드는 '{', '.join(neg_kws)}'이(가) 언급되었으며, "
+            f"개선이 필요한 영역으로 파악됩니다."
+        ) if neg_reviews else f"{store.name}의 최근 부정 리뷰가 없습니다."
+
+        ShopRecentReviewSentiment.objects.create(
+            shop_recent_review=srr, sentiment="positive", content=pos_content
+        )
+        ShopRecentReviewSentiment.objects.create(
+            shop_recent_review=srr, sentiment="negative", content=neg_content
+        )
+        ShopRecentReviewSentiment.objects.create(
+            shop_recent_review=srr, sentiment="neutral", content=summary_text
+        )

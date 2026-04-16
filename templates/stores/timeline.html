@@ -63,6 +63,38 @@
     </div>
     {% endif %}
 
+    <!-- ShopRecentReview 기반 긍정/부정 분리 분석 -->
+    {% if recent_sentiments %}
+    <div class="recent-sentiment-analysis mt-3">
+        {% if recent_sentiments.positive %}
+        <div class="sentiment-analysis-card sentiment-card-pos">
+            <div class="sentiment-card-header">
+                <i class="bi bi-hand-thumbs-up-fill me-1"></i>긍정 리뷰 분석
+                {% if srr %}<span class="sentiment-card-count">{{ srr.positive_count }}건</span>{% endif %}
+            </div>
+            <p class="sentiment-card-body">{{ recent_sentiments.positive }}</p>
+        </div>
+        {% endif %}
+        {% if recent_sentiments.negative and srr.negative_count > 0 %}
+        <div class="sentiment-analysis-card sentiment-card-neg mt-2">
+            <div class="sentiment-card-header">
+                <i class="bi bi-hand-thumbs-down-fill me-1"></i>부정 리뷰 분석
+                <span class="sentiment-card-count">{{ srr.negative_count }}건</span>
+            </div>
+            <p class="sentiment-card-body">{{ recent_sentiments.negative }}</p>
+        </div>
+        {% endif %}
+        {% if recent_sentiments.neutral %}
+        <div class="sentiment-analysis-card sentiment-card-neu mt-2">
+            <div class="sentiment-card-header">
+                <i class="bi bi-dash-circle me-1"></i>종합
+            </div>
+            <p class="sentiment-card-body">{{ recent_sentiments.neutral }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
 </div>
 {% endif %}
 
@@ -72,7 +104,7 @@
     <span class="recent-kw-label">자주 등장하는 키워드</span>
     <div class="recent-kw-chips">
         {% for kw in all_top_keywords %}
-        <a href="?q={{ kw.keyword }}" class="keyword-chip">{{ kw.keyword }} {{ kw.count }}</a>
+        <a href="?q={{ kw.keyword }}" class="keyword-chip">{{ kw.keyword }}</a>
         {% endfor %}
     </div>
 </div>
@@ -88,7 +120,7 @@
 {% if search_grouped %}
     {% for group in search_grouped %}
     <div class="search-month-group">
-        <div class="search-month-label">{{ group.year_week }}</div>
+        <div class="search-month-label">{{ group.week }}주차</div>
         {% for review in group.reviews %}
         <div class="search-review-card">
             <div class="search-review-meta">
@@ -141,35 +173,37 @@
     <div class="accordion-item">
         <h2 class="accordion-header">
             <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#week-{{ summary.year_week|slugify }}">
+                    data-bs-toggle="collapse" data-bs-target="#week-{{ summary.week_number }}">
                 <div class="d-flex justify-content-between align-items-center w-100 me-3">
                     <div>
-                        <strong>{{ summary.year_week }}</strong>
-                        <span class="badge ms-2" style="background:var(--yg-red);font-size:11px;">{{ summary.review_count }}개 리뷰</span>
+                        <strong>{{ summary.week_number }}주차</strong>
+                        <span class="badge ms-2" style="background:var(--yg-red);font-size:11px;">{{ summary.count }}개 리뷰</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <span style="color:var(--yg-star);">
+                        <span style="color:var(--yg-star);white-space:nowrap;">
                             {% for i in "12345" %}
-                                {% if forloop.counter <= summary.avg_rating %}
+                                {% if forloop.counter <= summary.average %}
                                     <i class="bi bi-star-fill" style="font-size:11px;"></i>
                                 {% else %}
                                     <i class="bi bi-star" style="font-size:11px;"></i>
                                 {% endif %}
                             {% endfor %}
                         </span>
-                        <strong style="font-size:14px;">{{ summary.avg_rating }}</strong>
-                        {% if summary.rating_change > 0 %}
-                            <span class="badge bg-success" style="font-size:11px;">+{{ summary.rating_change }}</span>
-                        {% elif summary.rating_change < 0 %}
-                            <span class="badge bg-danger" style="font-size:11px;">{{ summary.rating_change }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary" style="font-size:11px;">0</span>
+                        <strong style="font-size:14px;">{{ summary.average }}</strong>
+                        {% if item.has_diff %}
+                            {% if item.diff > 0 %}
+                            <span style="font-size:12px;color:#22c55e;font-weight:600;white-space:nowrap;">▲+{{ item.diff }}</span>
+                            {% elif item.diff < 0 %}
+                            <span style="font-size:12px;color:#ef4444;font-weight:600;white-space:nowrap;">▼{{ item.diff }}</span>
+                            {% else %}
+                            <span style="font-size:12px;color:#9ca3af;font-weight:600;white-space:nowrap;">→ 0.0</span>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>
             </button>
         </h2>
-        <div id="week-{{ summary.year_week|slugify }}"
+        <div id="week-{{ summary.week_number }}"
              class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
              data-bs-parent="#weeklyAccordion">
             <div class="accordion-body px-3 py-3">
@@ -197,32 +231,6 @@
                             </div>
                         </div>
                         {% endwith %}
-
-                        <div class="row g-3">
-                            <!-- 좋은 점 -->
-                            <div class="col-12 col-md-6 mb-2">
-                                <h6 style="font-size:13px;font-weight:700;"><i class="bi bi-hand-thumbs-up text-success me-1"></i>좋은 점</h6>
-                                <ul class="list-unstyled mb-0">
-                                    {% for point in summary.highlights.good_points %}
-                                    <li class="mb-1" style="font-size:13px;">
-                                        <i class="bi bi-check-circle text-success me-1"></i>{{ point }}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-
-                            <!-- 아쉬운 점 -->
-                            <div class="col-12 col-md-6 mb-2">
-                                <h6 style="font-size:13px;font-weight:700;"><i class="bi bi-hand-thumbs-down text-danger me-1"></i>아쉬운 점</h6>
-                                <ul class="list-unstyled mb-0">
-                                    {% for point in summary.highlights.bad_points %}
-                                    <li class="mb-1" style="font-size:13px;">
-                                        <i class="bi bi-x-circle text-danger me-1"></i>{{ point }}
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
 
                         <!-- 주요 키워드 (클릭 시 검색) -->
                         {% if summary.top_keywords %}
@@ -286,9 +294,9 @@
                 </div>
                 {% endfor %}
 
-                {% if summary.review_count > 5 %}
+                {% if summary.count > 5 %}
                 <div class="text-center mt-2">
-                    <small style="color:var(--yg-muted);font-size:12px;">{{ summary.review_count }}개 중 5개 표시</small>
+                    <small style="color:var(--yg-muted);font-size:12px;">{{ summary.count }}개 중 5개 표시</small>
                 </div>
                 {% endif %}
 

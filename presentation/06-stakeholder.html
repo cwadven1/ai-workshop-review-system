@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ReviewTime - 이해관계자 가치</title>
 <style>
+  html { font-size: 20px; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
+    word-break: keep-all;
     font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #f5f5f5;
     min-height: 100vh;
@@ -107,24 +109,91 @@
   .road-done { color: #00B894; font-size: 1.1rem; }
   .road-todo { color: #ddd; font-size: 1.1rem; }
 
-  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
-  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
-  .nav a:hover { background: #e0004a; }
-  .nav a.back { background: #ddd; color: #555; }
+  /* Step animation */
+  .anim-section {
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .anim-section.from-left  { transform: translateX(-32px); }
+  .anim-section.from-right { transform: translateX(32px); }
+  .anim-section.from-below { transform: translateY(28px); }
+  .anim-section.revealed   { opacity: 1; transform: translate(0, 0); }
+
+  /* Nav */
+  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; align-items: center; gap: 16px; }
+  .nav a.back { display: inline-block; padding: 12px 32px; background: #ddd; color: #555; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
   .nav a.back:hover { background: #ccc; }
+  .step-dots { display: flex; gap: 8px; align-items: center; }
+  .step-dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; transition: background 0.3s; }
+  .step-dot.active { background: #FA0050; }
+  #next-btn {
+    display: inline-block; padding: 12px 36px;
+    background: #FA0050; color: #fff;
+    border: none; border-radius: 30px;
+    font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: background 0.2s, transform 0.1s;
+    font-family: inherit;
+  }
+  #next-btn:hover { background: #e0004a; }
+  #next-btn:active { transform: scale(0.97); }
   .page-indicator { text-align: center; margin-top: 16px; font-size: 0.8rem; color: #bbb; }
 </style>
 </head>
 <body>
   <div class="header">
     <div class="logo">REVIEWTIME</div>
-    <h1>사장님과 소비자, 모두를 위한 플랫폼</h1>
+    <h1>모두를 위한 기능</h1>
     <p>데이터 기반 의사결정 + 주문 전 빠른 판단</p>
   </div>
 
   <div class="stakeholders">
+    <!-- 소비자 -->
+    <div class="stakeholder-card card-user anim-section from-left" id="sec-consumer">
+      <div class="persona">
+        <div class="persona-icon">👤</div>
+        <div class="persona-text">
+          <h2>소비자 (리뷰 소비자)</h2>
+          <p>"100개 리뷰 안 읽고 핵심만 파악하세요"</p>
+        </div>
+      </div>
+      <div class="value-desc">AI 요약과 트렌드 시각화로 빠른 주문 결정을 내리고 신뢰할 수 있는 선택을 합니다.</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div>
+            <div class="step-title">트렌드 확인</div>
+            <div class="step-desc">최근 별점 추이로 가게 상태 파악</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div>
+            <div class="step-title">키워드 필터</div>
+            <div class="step-desc">음식/배달/서비스 등 관심 분야만 확인</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div>
+            <div class="step-title">AI 요약 확인</div>
+            <div class="step-desc">AI 생성 리포트로 핵심 내용 파악</div>
+          </div>
+        </div>
+        <div class="flow-connector"><div class="flow-connector-line"></div></div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div>
+            <div class="step-title">주문 결정</div>
+            <div class="step-desc">데이터 기반 신뢰할 수 있는 선택</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 사장님 -->
-    <div class="stakeholder-card card-owner">
+    <div class="stakeholder-card card-owner anim-section from-right" id="sec-owner">
       <div class="persona">
         <div class="persona-icon">🏪</div>
         <div class="persona-text">
@@ -138,7 +207,7 @@
           <div class="step-num">1</div>
           <div>
             <div class="step-title">트렌드 파악</div>
-            <div class="step-desc">주/월별 별점 변화 추이 확인</div>
+            <div class="step-desc">주별 별점 변화 추이 확인</div>
           </div>
         </div>
         <div class="flow-connector"><div class="flow-connector-line"></div></div>
@@ -167,80 +236,31 @@
         </div>
       </div>
     </div>
-
-    <!-- 소비자 -->
-    <div class="stakeholder-card card-user">
-      <div class="persona">
-        <div class="persona-icon">🛵</div>
-        <div class="persona-text">
-          <h2>소비자 (리뷰 소비자)</h2>
-          <p>"100개 리뷰 안 읽고 핵심만 파악하세요"</p>
-        </div>
-      </div>
-      <div class="value-desc">AI 요약과 트렌드 시각화로 빠른 주문 결정을 내리고 신뢰할 수 있는 선택을 합니다.</div>
-      <div class="flow-steps">
-        <div class="flow-step">
-          <div class="step-num">1</div>
-          <div>
-            <div class="step-title">트렌드 확인</div>
-            <div class="step-desc">최근 별점 추이로 가게 상태 파악</div>
-          </div>
-        </div>
-        <div class="flow-connector"><div class="flow-connector-line"></div></div>
-        <div class="flow-step">
-          <div class="step-num">2</div>
-          <div>
-            <div class="step-title">카테고리 필터</div>
-            <div class="step-desc">음식/배달/서비스 등 관심 분야만 확인</div>
-          </div>
-        </div>
-        <div class="flow-connector"><div class="flow-connector-line"></div></div>
-        <div class="flow-step">
-          <div class="step-num">3</div>
-          <div>
-            <div class="step-title">AI 요약 확인</div>
-            <div class="step-desc">AI 생성 리포트로 핵심 내용 파악</div>
-          </div>
-        </div>
-        <div class="flow-connector"><div class="flow-connector-line"></div></div>
-        <div class="flow-step">
-          <div class="step-num">4</div>
-          <div>
-            <div class="step-title">주문 결정</div>
-            <div class="step-desc">데이터 기반 신뢰할 수 있는 선택</div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Feature tables -->
-  <div class="feat-section">
+  <div class="feat-section anim-section from-below" id="sec-feat">
     <h2>핵심 기능 비교</h2>
     <div class="feat-tables">
+      <div class="feat-table-wrap">
+        <h3 class="user-h">👤 소비자 입장</h3>
+        <table>
+          <thead><tr><th>기능</th><th>가치</th></tr></thead>
+          <tbody>
+            <tr><td>별점 트렌드 차트</td><td>"4.0점이어도 하락 추세면 경고, 2.5점이어도 상승 추세면 추천"</td></tr>
+            <tr><td>AI 요약</td><td>100개 리뷰 안 읽고 핵심을 1초에 파악</td></tr>
+            <tr><td>키워드 필터</td><td>내가 원하는 키워드만 골라서 맞춤 리뷰 확인</td></tr>
+          </tbody>
+        </table>
+      </div>
       <div class="feat-table-wrap">
         <h3 class="owner-h">🏪 사장님 입장</h3>
         <table>
           <thead><tr><th>기능</th><th>가치</th></tr></thead>
           <tbody>
             <tr><td>별점 트렌드 차트</td><td>매출 그래프처럼 직관적. 평점 변화를 1초에 파악</td></tr>
-            <tr><td>카테고리별 별점</td><td>"음식은 좋은데 배달이 문제" → 즉각 대응</td></tr>
-            <tr><td>전주/전월 비교</td><td>개선 조치 후 효과를 숫자로 확인</td></tr>
+            <tr><td>전주 비교</td><td>개선 조치 후 효과를 숫자로 확인</td></tr>
             <tr><td>AI 요약 리포트</td><td>100개 리뷰를 3줄로 요약. 핵심 즉시 파악</td></tr>
-            <tr><td>급변 알림</td><td>"위생 불만 300% 증가" 위기 신호 조기 감지</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="feat-table-wrap">
-        <h3 class="user-h">🛵 소비자 입장</h3>
-        <table>
-          <thead><tr><th>기능</th><th>가치</th></tr></thead>
-          <tbody>
-            <tr><td>별점 트렌드 차트</td><td>"4.0점이어도 하락 추세면 경고"</td></tr>
-            <tr><td>카테고리별 별점</td><td>"배달 빠른 곳" 등 중요 항목만 확인</td></tr>
-            <tr><td>AI 요약</td><td>100개 리뷰 안 읽고 핵심을 1초에 파악</td></tr>
-            <tr><td>월별 추이</td><td>"예전엔 좋았는데 요즘 별로" 가게 회피</td></tr>
-            <tr><td>키워드 빈도</td><td>다수 vs 소수 의견 구분. 과민반응 방지</td></tr>
           </tbody>
         </table>
       </div>
@@ -248,36 +268,36 @@
   </div>
 
   <!-- Comparison table -->
-  <div class="compare-section">
-    <h2>요약 vs 통계 — 둘 다 필요한 이유</h2>
+  <div class="compare-section anim-section from-below" id="sec-compare">
+    <h2>요약 + 통계가 만드는 시너지</h2>
     <div class="compare-wrap">
       <table>
         <thead>
           <tr>
             <th></th>
-            <th>통계만</th>
-            <th>요약만</th>
-            <th class="col-rt" style="background:#FFF0F3; color:#FA0050;">ReviewTime</th>
+            <th>요약 기여</th>
+            <th>통계 기여</th>
+            <th class="col-rt" style="background:#FFF0F3; color:#FA0050;">시너지</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>문제 파악</td>
-            <td>"3.1점, 하락"</td>
-            <td>"배달 불만 있음"</td>
+            <td>맥락·이유 파악</td>
+            <td>수치로 확인</td>
             <td style="background:#FFF5F7; font-weight:600; color:#FA0050;">"배달 3.1점(-0.5), 비 오는 날 온도 불만 집중"</td>
           </tr>
           <tr>
             <td>조치 가능성</td>
-            <td class="cross">낮음</td>
-            <td class="mid">중간</td>
-            <td style="background:#FFF5F7;"><span class="check">✓</span> <strong>높음</strong> (원인 + 심각도)</td>
+            <td>방향 제시</td>
+            <td>심각도 측정</td>
+            <td style="background:#FFF5F7;"><span class="check">✓</span> <strong>원인 + 수치 = 즉시 실행 가능</strong></td>
           </tr>
           <tr>
             <td>추적 가능성</td>
-            <td class="check">✓ 높음</td>
-            <td class="cross">낮음</td>
-            <td style="background:#FFF5F7;"><span class="check">✓</span> <strong>높음</strong> (숫자 비교 + 맥락)</td>
+            <td>현재 맥락 파악</td>
+            <td>시계열 비교</td>
+            <td style="background:#FFF5F7;"><span class="check">✓</span> <strong>맥락 + 변화 흐름 동시 파악</strong></td>
           </tr>
         </tbody>
       </table>
@@ -285,49 +305,60 @@
   </div>
 
   <!-- Summary -->
-  <div class="summary-section">
+  <div class="summary-section anim-section from-below" id="sec-summary">
     <h2>종합 가치 제안</h2>
-    <div class="summary-items">
-      <div class="summary-item">
-        <span class="tag tag-g">로컬</span>
-        kiwipiepy 로컬 분석 — 비용 $0, 75~85% 자동 처리
-      </div>
-      <div class="summary-item">
-        <span class="tag tag-o">LLM</span>
-        LLM 하이브리드 전략 — 토큰 25배 절약, 정확도 유지
-      </div>
-      <div class="summary-item">
-        <span class="tag tag-p">시각화</span>
-        주차별 트렌드 시각화 — 직관적인 데이터 기반 판단
-      </div>
-    </div>
     <div class="summary-quote">
-      사장님의 의사결정과 소비자의 주문 판단,<br>
-      모두를 위한 데이터 기반 리뷰 인사이트 플랫폼
-    </div>
-  </div>
-
-  <!-- Roadmap -->
-  <div class="roadmap-section">
-    <h2>🗺️ 향후 확장 로드맵</h2>
-    <div class="roadmap-list">
-      <div class="roadmap-item"><span class="road-done">✅</span> HTML 시각적 리포트 출력 (6페이지 완료)</div>
-      <div class="roadmap-item"><span class="road-done">✅</span> 키워드 필터링 &amp; 리뷰 더보기 인터랙션</div>
-      <div class="roadmap-item"><span class="road-done">✅</span> W13~W16 기간 종합 AI 요약 자동 생성</div>
-      <div class="roadmap-item"><span class="road-done">✅</span> 업종별 가게 SVG 이미지 (12개 업종 커버)</div>
-      <div class="roadmap-item"><span class="road-done">✅</span> 주별 감정 분석 3색 통합 바 UI (긍정/중립/부정)</div>
-      <div class="roadmap-item"><span class="road-done">✅</span> 가게 목록 UI 개선 (이미지 표시, 클린 카드)</div>
-      <div class="roadmap-item"><span class="road-todo">⬜</span> cron 기반 자동 배치 실행</div>
-      <div class="roadmap-item"><span class="road-todo">⬜</span> PDF 리포트 내보내기</div>
-      <div class="roadmap-item"><span class="road-todo">⬜</span> 다중 LLM 지원 (Claude, OpenAI)</div>
-      <div class="roadmap-item"><span class="road-todo">⬜</span> 가게 간 비교 분석 (동일 업종 내 순위)</div>
+      소비자의 주문 판단과 피드백에 따른 사장님의 의사결정,<br>
+      모두를 위한 데이터 기반 리뷰 인사이트 기능
     </div>
   </div>
 
   <div class="nav">
-    <a href="05-star-trend.html" class="back">&larr; 이전</a>
-    <a href="01-overview.html">처음으로 &rarr;</a>
+    <a href="01-overview.html" class="back">&larr; 이전</a>
+    <div class="step-dots">
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <button id="next-btn">다음 &rarr;</button>
   </div>
-  <div class="page-indicator">6 / 6</div>
+  <div class="page-indicator">2 / 3</div>
+
+  <script>
+    let step = 0;
+    const sections = [
+      document.getElementById('sec-consumer'),
+      document.getElementById('sec-owner'),
+      document.getElementById('sec-feat'),
+      document.getElementById('sec-compare'),
+      document.getElementById('sec-summary')
+    ];
+    const dots = document.querySelectorAll('.step-dot');
+    const btn = document.getElementById('next-btn');
+
+    function advance() {
+      if (step < sections.length) {
+        const el = sections[step];
+        el.classList.add('revealed');
+        dots[step].classList.add('active');
+        step++;
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+      } else {
+        window.location.href = '07-roadmap.html';
+      }
+    }
+
+    btn.addEventListener('click', advance);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter') {
+        e.preventDefault();
+        advance();
+      }
+    });
+  </script>
 </body>
 </html>

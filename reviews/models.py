@@ -25,53 +25,28 @@ class Review(models.Model):
     )
     sentiment_score = models.FloatField("감정 점수", default=0.0)
     keywords = models.JSONField("키워드", default=list, blank=True)
-    year_month = models.CharField("연월", max_length=7, help_text="예: 2025-02", blank=True, default="")
-    year_week = models.CharField("연주차", max_length=8, help_text="예: 2025-W14", blank=True, default="")
+    week = models.IntegerField("주차", help_text="예: 14 (ISO 주차)", default=0)
     images = models.JSONField("리뷰 이미지", default=list, blank=True)
     review_date = models.DateField("리뷰 날짜")
     source = models.CharField("출처", max_length=50, default="yogiyo")
+    is_deleted = models.BooleanField("삭제 여부", default=False)
+    deleted_at = models.DateTimeField("삭제일시", null=True, blank=True)
+    is_blinded = models.BooleanField("블라인드 여부", default=False)
+    blinded_at = models.DateTimeField("블라인드일시", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "리뷰"
         verbose_name_plural = "리뷰"
         indexes = [
-            models.Index(fields=["store", "year_month"], name="idx_store_year_month"),
-            models.Index(fields=["store", "year_week"], name="idx_store_year_week"),
+            models.Index(fields=["store", "week", "created_at"], name="idx_store_week_created"),
         ]
         ordering = ["-review_date"]
 
     def __str__(self):
-        return f"{self.store.name} - {self.rating}점 ({self.year_week})"
+        return f"{self.store.name} - {self.rating}점 ({self.week}주차)"
 
-
-class WeeklySummary(models.Model):
-    store = models.ForeignKey(
-        Store, on_delete=models.CASCADE, related_name="weekly_summaries"
-    )
-    year_week = models.CharField("연주차", max_length=8)
-    summary = models.TextField("AI 요약", blank=True)
-    highlights = models.JSONField("하이라이트", default=dict, blank=True)
-    avg_rating = models.FloatField("주 평균 평점", default=0.0)
-    review_count = models.IntegerField("주 리뷰 수", default=0)
-    sentiment_distribution = models.JSONField(
-        "감정 분포",
-        default=dict,
-        blank=True,
-        help_text='예: {"positive": 60, "neutral": 25, "negative": 15}',
-    )
-    top_keywords = models.JSONField("상위 키워드", default=list, blank=True)
-    rating_change = models.FloatField("평점 변화", default=0.0)
-    generated_at = models.DateTimeField("생성일시", auto_now=True)
-
-    class Meta:
-        verbose_name = "주별 요약"
-        verbose_name_plural = "주별 요약"
-        unique_together = [("store", "year_week")]
-        ordering = ["-year_week"]
-
-    def __str__(self):
-        return f"{self.store.name} - {self.year_week} 요약"
 
 
 class MenuReview(models.Model):

@@ -219,26 +219,26 @@ main {
 }
 
 .trending-card {
-  width: 110px;
-  min-width: 110px;
+  width: 68px;
+  min-width: 68px;
   text-decoration: none;
   color: var(--yg-text);
   display: block;
 }
 
 .trending-thumb {
-  width: 86px;
-  height: 86px;
+  width: 50px;
+  height: 50px;
   background: var(--yg-bg);
-  border-radius: 20px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 8px;
+  margin: 0 auto 6px;
 }
 
 .trending-thumb i {
-  font-size: 30px;
+  font-size: 22px;
   color: #BBBBBB;
 }
 
@@ -246,18 +246,18 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 20px;
+  border-radius: 16px;
 }
 
 .trending-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--yg-text);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 110px;
+  width: 68px;
   padding: 0 4px;
 }
 
@@ -329,8 +329,8 @@ main {
 /* ── 가게 카드 목록 ── */
 .store-card-wrap {
   background: #FFFFFF;
-  padding: 14px 16px 10px;
-  margin-bottom: 8px;
+  padding: 10px 16px 8px;
+  margin-bottom: 6px;
   text-decoration: none;
   color: inherit;
   display: block;
@@ -348,11 +348,11 @@ main {
 }
 
 .store-thumb {
-  width: 100px;
-  height: 100px;
-  min-width: 100px;
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
   background: #F0F0F0;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -361,7 +361,7 @@ main {
 }
 
 .store-thumb i {
-  font-size: 32px;
+  font-size: 24px;
   color: #BBBBBB;
 }
 
@@ -369,7 +369,7 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .store-info {
@@ -1250,7 +1250,7 @@ main {
 
 /* 키워드 */
 .recent-keywords {
-  margin-top: 4px;
+  padding: 20px 16px 0;
 }
 
 .recent-kw-label {
@@ -1265,4 +1265,75 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* 긍정/부정 분리 분석 카드 */
+.recent-sentiment-analysis {
+  padding: 0 16px;
+}
+
+.sentiment-analysis-card {
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.sentiment-card-pos {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+}
+
+.sentiment-card-neg {
+  background: #fff1f2;
+  border: 1px solid #fca5a5;
+}
+
+.sentiment-card-neu {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.sentiment-card-header {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sentiment-card-pos .sentiment-card-header {
+  color: #16a34a;
+}
+
+.sentiment-card-neg .sentiment-card-header {
+  color: #dc2626;
+}
+
+.sentiment-card-neu .sentiment-card-header {
+  color: #64748b;
+}
+
+.sentiment-card-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.sentiment-card-pos .sentiment-card-count {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.sentiment-card-neg .sentiment-card-count {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.sentiment-card-body {
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--yg-text);
 }

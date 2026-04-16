@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>어디가좋은데? - 키워드 추출 + 긍정/부정</title>
+<style>
+  html { font-size: 20px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    word-break: keep-all;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header h1 span { color: #FA0050; }
+  .header p { font-size: 1rem; color: #888; }
+
+  .part-badge {
+    display: inline-block;
+    background: #FFF0F3;
+    color: #FA0050;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  /* 섹션 타이틀 */
+  .section-title { text-align: center; font-size: 1.1rem; font-weight: 700; color: #222; margin: 40px 0 16px; }
+  .section-title span { color: #FA0050; }
+
+  /* 흐름도 */
+  .flow-wrap {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .flow-node {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 18px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    min-width: 120px;
+    flex: 1;
+    max-width: 160px;
+  }
+  .flow-node.red    { border-top: 3px solid #FA0050; }
+  .flow-node.green  { border-top: 3px solid #00B894; }
+  .flow-node.orange { border-top: 3px solid #FF9100; }
+  .flow-node.purple { border-top: 3px solid #6C5CE7; }
+  .flow-icon  { font-size: 1.5rem; margin-bottom: 6px; }
+  .flow-label { font-size: 0.75rem; font-weight: 700; color: #222; }
+  .flow-sub   { font-size: 0.62rem; color: #999; margin-top: 3px; }
+  .flow-arrow { font-size: 1.2rem; color: #ccc; padding: 0 6px; flex-shrink: 0; }
+
+  /* 코드 블록 */
+  .code-wrap {
+    max-width: 860px;
+    margin: 0 auto 40px;
+    background: #1a1d2e;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .code-header {
+    background: #22263a;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .code-filename { font-size: 0.65rem; color: #8892b0; font-family: monospace; }
+  .code-body {
+    padding: 22px 26px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 0.7rem;
+    line-height: 1.85;
+    color: #cdd6f4;
+    overflow-x: auto;
+  }
+  .kw  { color: #ff79c6; }
+  .fn  { color: #50fa7b; }
+  .str { color: #f1fa8c; }
+  .cm  { color: #6272a4; font-style: italic; }
+  .num { color: #bd93f9; }
+  .var { color: #ffb86c; }
+
+  /* 감성 분류 테이블 */
+  .table-wrap {
+    max-width: 860px;
+    margin: 0 auto 40px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+  .table-header {
+    background: #00B894;
+    color: #fff;
+    padding: 14px 24px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f8f8; font-size: 0.72rem; color: #888; font-weight: 600; padding: 10px 16px; text-align: left; }
+  td { font-size: 0.78rem; color: #555; padding: 11px 16px; border-bottom: 1px solid #f5f5f5; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .label-pos { display: inline-block; background: #E8FFF5; color: #00B894; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .label-neg { display: inline-block; background: #FFF0F3; color: #FA0050; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .label-neu { display: inline-block; background: #f5f5f5; color: #888; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .score-pos { font-weight: 700; color: #00B894; }
+  .score-neg { font-weight: 700; color: #FA0050; }
+  .score-neu { font-weight: 700; color: #888; }
+  .kw-match { background: #f0edff; color: #6C5CE7; font-size: 0.68rem; padding: 2px 8px; border-radius: 8px; font-family: monospace; }
+
+  /* 시각화 2분할 */
+  .split {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+  .card-icon { font-size: 1.6rem; margin-bottom: 10px; }
+  .card h3 { font-size: 0.9rem; font-weight: 700; color: #222; margin-bottom: 14px; }
+
+  /* 키워드 클라우드 */
+  .keyword-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+  .kc { padding: 5px 14px; border-radius: 20px; font-weight: 700; border: 1px solid; cursor: default; }
+  .kc-1 { font-size: 1rem; color: #FA0050; border-color: rgba(250,0,80,.3); background: #FFF0F3; }
+  .kc-2 { font-size: 0.9rem; color: #6C5CE7; border-color: rgba(108,92,231,.3); background: #F0EDFF; }
+  .kc-3 { font-size: 0.82rem; color: #FF9100; border-color: rgba(255,145,0,.3); background: #FFF3E0; }
+  .kc-4 { font-size: 0.75rem; color: #888; border-color: #e0e0e0; background: #f8f8f8; }
+
+  /* 감성 바 */
+  .sent-bars { display: flex; flex-direction: column; gap: 12px; }
+  .sent-row { display: flex; align-items: center; gap: 12px; }
+  .sent-label { font-size: 0.75rem; font-weight: 700; width: 36px; }
+  .sent-track { flex: 1; height: 10px; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
+  .sent-fill  { height: 100%; border-radius: 8px; }
+  .sent-val   { font-size: 0.75rem; color: #888; width: 32px; text-align: right; }
+
+  /* 관리 커맨드 카드 그리드 */
+  .cmd-grid {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .cmd-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+  .cmd-card .cmd-icon { font-size: 1.6rem; margin-bottom: 10px; }
+  .cmd-card h3 { font-size: 0.88rem; font-weight: 700; color: #222; margin-bottom: 8px; }
+  .cmd-card p { font-size: 0.76rem; color: #666; line-height: 1.7; }
+  .cmd-card code { background: #f5f5f5; color: #555; font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+
+  /* 모델 테이블 뱃지 */
+  .badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .badge-pk  { background: #FFF0F3; color: #FA0050; }
+  .badge-fk  { background: #E8FFF5; color: #00B894; }
+  .badge-idx { background: #FFF3E0; color: #FF9100; }
+  .field-name { font-weight: 700; color: #222; font-family: monospace; }
+  .field-type { color: #6C5CE7; font-family: monospace; font-size: 0.72rem; }
+  .field-desc { color: #888; }
+  .tr-highlight td { background: #FFF8F0; }
+  .tr-highlight td:first-child { border-left: 3px solid #FF9100; }
+
+  /* 키워드 추출 단계 카드 */
+  .step-grid {
+    max-width: 900px;
+    margin: 0 auto 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 760px) { .step-grid { grid-template-columns: repeat(2, 1fr); } }
+  .step-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    text-align: center;
+    position: relative;
+  }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #FA0050; color: #fff;
+    font-size: 0.65rem; font-weight: 800;
+    margin-bottom: 10px;
+  }
+  .step-card .step-icon { font-size: 1.4rem; margin-bottom: 8px; display: block; }
+  .step-card h4 { font-size: 0.78rem; font-weight: 700; color: #222; margin-bottom: 6px; }
+  .step-card p { font-size: 0.68rem; color: #777; line-height: 1.6; }
+  .step-card code { background: #f5f5f5; color: #555; font-size: 0.64rem; padding: 1px 5px; border-radius: 4px; font-family: monospace; }
+
+  /* 네비 */
+  .nav { text-align: center; margin-top: 48px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; }
+  .nav a:hover { background: #e0004a; }
+  .nav a.back { background: #ddd; color: #555; }
+  .nav a.back:hover { background: #ccc; }
+  .page-indicator { text-align: center; margin-top: 16px; font-size: 0.75rem; color: #bbb; }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="part-badge">PART 3 · 기술 구현</div>
+    <div class="logo">어디가좋은데?</div>
+    <h1>키워드 추출 <span>+ 긍정/부정</span></h1>
+    <p>리뷰별 키워드 빈도 집계 · 감성 점수로 긍정·중립·부정 분류</p>
+  </div>
+
+  <!-- 흐름도 -->
+  <div class="flow-wrap">
+    <div class="flow-node red">
+      <div class="flow-icon">📝</div>
+      <div class="flow-label">리뷰 텍스트</div>
+      <div class="flow-sub">Review.content</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node orange">
+      <div class="flow-icon">🔬</div>
+      <div class="flow-label">키워드 추출</div>
+      <div class="flow-sub">Gemini / 형태소</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node green">
+      <div class="flow-icon">😊</div>
+      <div class="flow-label">감성 분류</div>
+      <div class="flow-sub">score → label</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node purple">
+      <div class="flow-icon">💾</div>
+      <div class="flow-label">DB 저장</div>
+      <div class="flow-sub">keywords / sentiment</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node orange">
+      <div class="flow-icon">📊</div>
+      <div class="flow-label">주차 집계</div>
+      <div class="flow-sub">top_keywords</div>
+    </div>
+  </div>
+
+  <!-- Keyword 모델 -->
+  <h2 class="section-title"><span>Keyword</span> 모델</h2>
+  <div class="table-wrap">
+    <div class="table-header" style="background:#FA0050; display:flex; justify-content:space-between; align-items:center;">
+      <span>🗂 Keyword</span>
+      <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; font-weight:400;">키워드 마스터 테이블</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px">타입</th>
+          <th style="width:160px">필드명</th>
+          <th style="width:160px">타입</th>
+          <th>설명</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-pk">PK</span></td>
+          <td class="field-name">id</td>
+          <td class="field-type">AutoField</td>
+          <td class="field-desc">기본 키 (자동 증가)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">word</td>
+          <td class="field-type">CharField (unique)</td>
+          <td class="field-desc">키워드 텍스트 (예: "신선한", "배달늦음")</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">sentiment</td>
+          <td class="field-type">CharField</td>
+          <td class="field-desc">감성 분류 — positive / negative / neutral</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ShopWeekReviewKeyword 모델 -->
+  <h2 class="section-title"><span>ShopWeekReviewKeyword</span> 모델</h2>
+  <div class="table-wrap">
+    <div class="table-header" style="background:#FA0050; display:flex; justify-content:space-between; align-items:center;">
+      <span>🗂 ShopWeekReviewKeyword</span>
+      <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; font-weight:400;">ShopWeekReview × Keyword 집계</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px">타입</th>
+          <th style="width:160px">필드명</th>
+          <th style="width:160px">타입</th>
+          <th>설명</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-pk">PK</span></td>
+          <td class="field-name">id</td>
+          <td class="field-type">AutoField</td>
+          <td class="field-desc">기본 키 (자동 증가)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-fk">FK</span></td>
+          <td class="field-name">shop_week_review_id</td>
+          <td class="field-type">ForeignKey</td>
+          <td class="field-desc">ShopWeekReview 참조</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-fk">FK</span></td>
+          <td class="field-name">keyword_id</td>
+          <td class="field-type">ForeignKey</td>
+          <td class="field-desc">Keyword 참조</td>
+        </tr>
+        <tr class="tr-highlight">
+          <td><span class="badge badge-idx">IDX</span></td>
+          <td class="field-name">keyword_id</td>
+          <td class="field-type">—</td>
+          <td class="field-desc">키워드별 조회용 인덱스 (idx_swrk_keyword) ★</td>
+        </tr>
+        <tr class="tr-highlight">
+          <td><span class="badge badge-idx">IDX</span></td>
+          <td class="field-name">count</td>
+          <td class="field-type">IntegerField</td>
+          <td class="field-desc">해당 주차 키워드 출현 횟수 — 인덱스 (idx_swrk_count) ★</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 키워드 추출 방법 -->
+  <h2 class="section-title">키워드 추출 <span>방법</span></h2>
+  <div class="step-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <span class="step-icon">🤖</span>
+      <h4>리뷰 텍스트 분석</h4>
+      <p><strong>Gemini AI</strong>로 핵심 단어 추출<br>또는 <strong>형태소 분석기</strong>(kiwipiepy) 로컬 실행 — API 비용 없음</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <span class="step-icon">🔍</span>
+      <h4>Keyword 테이블 조회</h4>
+      <p>추출된 단어를 <code>Keyword.objects.filter(word=…)</code>로 조회 — 이미 등록된 단어면 재사용</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <span class="step-icon">✨</span>
+      <h4>없으면 신규 생성</h4>
+      <p><code>get_or_create(word, sentiment)</code>로 upsert — <code>positive / negative / neutral</code> 감성 태그와 함께 등록</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <span class="step-icon">💾</span>
+      <h4>리뷰 연결 저장</h4>
+      <p><code>ReviewKeyword</code> 테이블에 리뷰↔키워드 관계 저장 → 주차 집계 시 word 카운팅에 활용</p>
+    </div>
+  </div>
+
+  <!-- 키워드 추출 코드 -->
+  <div class="code-wrap">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+      <span class="code-filename">models.py + extract_keywords.py — Keyword 테이블 기반 upsert</span>
+    </div>
+    <div class="code-body"><pre><span class="cm"># ── Keyword 모델 ─────────────────────────────────────</span>
+<span class="kw">class</span> <span class="fn">Keyword</span>(<span class="var">models</span>.Model):
+    <span class="var">word</span>      = <span class="var">models</span>.<span class="fn">CharField</span>(max_length=<span class="num">50</span>, unique=<span class="kw">True</span>)
+    <span class="var">sentiment</span> = <span class="var">models</span>.<span class="fn">CharField</span>(choices=[               <span class="cm"># positive / negative / neutral</span>
+        (<span class="str">"positive"</span>, <span class="str">"긍정"</span>), (<span class="str">"negative"</span>, <span class="str">"부정"</span>), (<span class="str">"neutral"</span>, <span class="str">"중립"</span>)
+    ])
+
+<span class="cm"># ── 키워드 추출 (Gemini 또는 형태소) ───────────────────</span>
+<span class="kw">def</span> <span class="fn">extract_keywords</span>(<span class="var">review_text</span>, <span class="var">rating</span>):
+    <span class="cm"># 방법 A: Gemini API</span>
+    <span class="var">raw_words</span> = <span class="fn">gemini_extract</span>(<span class="var">review_text</span>)
+    <span class="cm"># 방법 B: kiwipiepy 형태소 분석 (로컬, API 비용 없음)</span>
+    <span class="cm"># raw_words = kiwi_extract(review_text)</span>
+
+    <span class="var">sentiment</span> = (
+        <span class="str">"positive"</span> <span class="kw">if</span> <span class="var">rating</span> &gt;= <span class="num">4</span> <span class="kw">else</span>
+        <span class="str">"negative"</span> <span class="kw">if</span> <span class="var">rating</span> &lt;= <span class="num">2</span> <span class="kw">else</span> <span class="str">"neutral"</span>
+    )
+
+    <span class="var">keywords</span> = []
+    <span class="kw">for</span> <span class="var">word</span> <span class="kw">in</span> <span class="var">raw_words</span>:
+        <span class="var">kw</span>, _ = <span class="var">Keyword</span>.objects.<span class="fn">get_or_create</span>(            <span class="cm"># ③ 있으면 재사용 / 없으면 생성</span>
+            word=<span class="var">word</span>,
+            defaults={<span class="str">"sentiment"</span>: <span class="var">sentiment</span>}
+        )
+        <span class="var">keywords</span>.append(<span class="var">kw</span>)
+
+    <span class="kw">return</span> <span class="var">keywords</span>                                          <span class="cm"># ④ ReviewKeyword 테이블에 연결 저장</span></pre>
+    </div>
+  </div>
+
+  <!-- 감성 분류 기준 테이블 -->
+  <h2 class="section-title">감성 <span>분류 기준</span></h2>
+  <div class="table-wrap">
+    <div class="table-header">😊 Review.sentiment — 분류 예시</div>
+    <table>
+      <thead>
+        <tr>
+          <th>리뷰 내용</th>
+          <th>매칭 키워드</th>
+          <th style="text-align:center">점수</th>
+          <th>결과</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>"맛있어요! 배달도 빠르고 포장도 깔끔해요"</td>
+          <td><span class="kw-match">맛있어요(+1) · 빠르고(+1) · 깔끔(+1)</span></td>
+          <td class="score-pos" style="text-align:center">+3</td>
+          <td><span class="label-pos">positive</span></td>
+        </tr>
+        <tr>
+          <td>"음식이 신선하고 양도 많아서 만족해요"</td>
+          <td><span class="kw-match">신선(+1) · 만족(+1)</span></td>
+          <td class="score-pos" style="text-align:center">+2</td>
+          <td><span class="label-pos">positive</span></td>
+        </tr>
+        <tr>
+          <td>"음식이 식어서 왔고 국물이 짰어요"</td>
+          <td><span class="kw-match">식어(-1) · 짰어(-1)</span></td>
+          <td class="score-neg" style="text-align:center">-2</td>
+          <td><span class="label-neg">negative</span></td>
+        </tr>
+        <tr>
+          <td>"배달이 너무 늦고 포장이 엉망이에요"</td>
+          <td><span class="kw-match">늦고(-1) · 엉망(-1)</span></td>
+          <td class="score-neg" style="text-align:center">-2</td>
+          <td><span class="label-neg">negative</span></td>
+        </tr>
+        <tr>
+          <td>"그냥 보통이에요. 특별한 건 없어요."</td>
+          <td><span class="kw-match">매칭 없음</span></td>
+          <td class="score-neu" style="text-align:center">0</td>
+          <td><span class="label-neu">neutral</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 키워드 집계 코드 -->
+  <h2 class="section-title">키워드 <span>집계 코드</span></h2>
+  <div class="code-wrap">
+    <div class="code-header">
+      <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+      <span class="code-filename">generate_summaries.py + stores/views.py</span>
+    </div>
+    <div class="code-body"><pre><span class="cm"># ── 주차별 키워드 집계 (generate_summaries.py)</span>
+<span class="var">all_keywords</span> = []
+<span class="kw">for</span> <span class="var">r</span> <span class="kw">in</span> <span class="var">reviews</span>:
+    <span class="var">all_keywords</span>.extend(<span class="var">r</span>.keywords)        <span class="cm"># JSONField 배열 펼치기</span>
+
+<span class="var">keyword_counts</span> = defaultdict(<span class="fn">int</span>)
+<span class="kw">for</span> <span class="var">kw</span> <span class="kw">in</span> <span class="var">all_keywords</span>:
+    <span class="var">keyword_counts</span>[<span class="var">kw</span>] += <span class="num">1</span>
+
+<span class="cm"># 상위 5개 → WeeklySummary.top_keywords 에 저장</span>
+<span class="var">top_keywords</span> = sorted(<span class="var">keyword_counts</span>.items(), key=<span class="kw">lambda</span> <span class="var">x</span>: -<span class="var">x</span>[<span class="num">1</span>])[:5]
+<span class="var">top_keywords</span> = [{"keyword": <span class="var">kw</span>, "count": <span class="var">cnt</span>} <span class="kw">for</span> <span class="var">kw</span>, <span class="var">cnt</span> <span class="kw">in</span> <span class="var">top_keywords</span>]
+
+
+<span class="cm"># ── 최근 4주 cross-week 재집계 (stores/views.py)</span>
+<span class="var">kw_counter</span> = Counter()
+<span class="kw">for</span> <span class="var">m</span> <span class="kw">in</span> <span class="var">recent_weeks</span>:              <span class="cm"># 최근 4주 WeeklySummary</span>
+    <span class="kw">for</span> <span class="var">kw</span> <span class="kw">in</span> (<span class="var">m</span>[<span class="str">'summary'</span>].top_keywords <span class="kw">or</span> []):
+        <span class="var">kw_counter</span>[<span class="var">kw</span>[<span class="str">'keyword'</span>]] += <span class="var">kw</span>.get(<span class="str">'count'</span>, <span class="num">1</span>)
+
+<span class="var">top_keywords</span> = [
+    {<span class="str">'keyword'</span>: <span class="var">k</span>, <span class="str">'count'</span>: <span class="var">c</span>}
+    <span class="kw">for</span> <span class="var">k</span>, <span class="var">c</span> <span class="kw">in</span> <span class="var">kw_counter</span>.most_common(<span class="num">8</span>)   <span class="cm"># 상위 8개</span>
+]</pre></div>
+  </div>
+
+  <!-- 시각화 예시 -->
+  <h2 class="section-title">시각화 <span>예시</span></h2>
+  <div class="split">
+    <div class="card">
+      <div class="card-icon">☁️</div>
+      <h3>키워드 시각화 (크기 = 빈도)</h3>
+      <div class="keyword-cloud">
+        <span class="kc kc-1">맛있어요 ×38</span>
+        <span class="kc kc-2">배달빠름 ×31</span>
+        <span class="kc kc-2">친절함 ×27</span>
+        <span class="kc kc-3">포장좋음 ×19</span>
+        <span class="kc kc-3">양많음 ×17</span>
+        <span class="kc kc-4">늦음 ×9</span>
+        <span class="kc kc-4">보통 ×7</span>
+        <span class="kc kc-4">재주문 ×6</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>감성 분포 (최근 4주)</h3>
+      <div class="sent-bars">
+        <div class="sent-row">
+          <span class="sent-label" style="color:#00B894">긍정</span>
+          <div class="sent-track"><div class="sent-fill" style="width:68%;background:#00B894"></div></div>
+          <span class="sent-val">68%</span>
+        </div>
+        <div class="sent-row">
+          <span class="sent-label" style="color:#888">중립</span>
+          <div class="sent-track"><div class="sent-fill" style="width:20%;background:#aaa"></div></div>
+          <span class="sent-val">20%</span>
+        </div>
+        <div class="sent-row">
+          <span class="sent-label" style="color:#FA0050">부정</span>
+          <div class="sent-track"><div class="sent-fill" style="width:12%;background:#FA0050"></div></div>
+          <span class="sent-val">12%</span>
+        </div>
+      </div>
+      <p style="font-size:0.7rem;color:#aaa;margin-top:14px">
+        sentiment_distribution 주차별 합산 → 비율 계산
+      </p>
+    </div>
+  </div>
+
+  <!-- 관리 커맨드 -->
+  <h2 class="section-title">관리 커맨드 — <span>배치 처리</span></h2>
+  <div class="cmd-grid">
+    <div class="cmd-card">
+      <div class="cmd-icon">⚙️</div>
+      <h3>generate_summaries</h3>
+      <p><code>--store_id</code> <code>--year_week</code> 인자로 특정 가게·주차만 처리. 개발·테스트·재실행 시 사용.</p>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-icon">🔁</div>
+      <h3>generate_all_summaries</h3>
+      <p>모든 (store, year_week) 조합을 자동 탐색해 일괄 처리. <code>--force</code>로 기존 요약도 재생성 가능.</p>
+    </div>
+    <div class="cmd-card">
+      <div class="cmd-icon">🛡</div>
+      <h3>API 키 없을 때 폴백</h3>
+      <p><code>GEMINI_API_KEY</code> 미설정 시 통계 기반 <strong>더미 요약</strong>으로 자동 대체. 개발 환경에서도 전체 파이프라인 동작.</p>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="10-tech-part2.html" class="back">&larr; 이전</a>
+    <a href="12-arch-data-pipeline.html">데이터 파이프라인 아키텍처 &rarr;</a>
+  </div>
+  <div class="page-indicator">11 / 11</div>
+</body>
+</html>

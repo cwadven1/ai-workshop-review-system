@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ReviewTime - 프로젝트 개요</title>
+<title>어디가좋은데? - 프로젝트 개요</title>
 <style>
+  html { font-size: 20px; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
+    word-break: keep-all;
     font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #f5f5f5;
     min-height: 100vh;
@@ -30,72 +32,98 @@
     margin-top: 8px;
   }
 
-  /* Problem cards */
+  /* Section title */
   .section-title { text-align: center; font-size: 1.3rem; font-weight: 700; color: #222; margin: 40px 0 20px; }
   .section-title span { color: #FA0050; }
 
-  .problem-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 16px;
+  /* Pairs layout */
+  .pairs-grid {
     max-width: 900px;
     margin: 0 auto 50px;
-  }
-  .problem-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    border-top: 4px solid #FA0050;
-  }
-  .problem-card .icon { font-size: 2rem; margin-bottom: 12px; }
-  .problem-card .situation { font-size: 0.78rem; font-weight: 700; color: #FA0050; background: #FFF0F3; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 8px; }
-  .problem-card h3 { font-size: 1rem; color: #222; margin-bottom: 6px; }
-  .problem-card p { font-size: 0.85rem; color: #777; line-height: 1.5; }
-
-  /* Solution cards */
-  .solution-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-    max-width: 900px;
-    margin: 0 auto 50px;
-  }
-  .solution-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     display: flex;
-    gap: 16px;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
   }
-  .solution-card.s1 { border-left: 5px solid #00B894; }
-  .solution-card.s2 { border-left: 5px solid #FF9100; }
-  .solution-card.s3 { border-left: 5px solid #6C5CE7; }
-  .sol-icon {
-    width: 48px; height: 48px;
-    border-radius: 12px;
+  .pair-row {
+    display: grid;
+    grid-template-columns: 1fr 52px 1fr;
+    align-items: stretch;
+  }
+  /* Problem side */
+  .pair-problem {
+    background: #fff;
+    border-radius: 14px 0 0 14px;
+    padding: 22px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border-left: 5px solid #FA0050;
+  }
+  .pair-problem .icon { font-size: 1.8rem; margin-bottom: 10px; }
+  .pair-problem .situation { font-size: 0.75rem; font-weight: 700; color: #FA0050; background: #FFF0F3; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 8px; }
+  .pair-problem h3 { font-size: 0.95rem; font-weight: 700; color: #222; margin-bottom: 6px; }
+  .pair-problem p { font-size: 0.86rem; color: #555; line-height: 1.75; }
+  /* Arrow connector */
+  .pair-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    position: relative;
+  }
+  .pair-connector::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    height: 2px;
+    background: #e0e0e0;
+  }
+  .arrow-circle {
+    width: 34px; height: 34px;
+    border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.4rem;
+    font-size: 1rem; color: #fff; font-weight: 700;
+    z-index: 1;
     flex-shrink: 0;
   }
-  .s1 .sol-icon { background: #E8FFF5; }
-  .s2 .sol-icon { background: #FFF3E0; }
-  .s3 .sol-icon { background: #F0EDFF; }
-  .sol-body h3 { font-size: 0.95rem; font-weight: 700; color: #222; margin-bottom: 6px; }
-  .sol-body p { font-size: 0.82rem; color: #777; line-height: 1.5; }
-  .sol-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 8px;
-    margin-top: 6px;
+  .p1 .arrow-circle { background: #00B894; }
+  .p2 .arrow-circle { background: #FF9100; }
+  .p3 .arrow-circle { background: #6C5CE7; }
+  /* Solution side */
+  .pair-solution {
+    border-radius: 0 14px 14px 0;
+    padding: 22px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
   }
-  .s1 .sol-badge { background: #E8FFF5; color: #00B894; }
-  .s2 .sol-badge { background: #FFF3E0; color: #FF9100; }
-  .s3 .sol-badge { background: #F0EDFF; color: #6C5CE7; }
+  .p1 .pair-solution { background: #F0FFF9; border-left: 4px solid #00B894; }
+  .p2 .pair-solution { background: #FFF8F0; border-left: 4px solid #FF9100; }
+  .p3 .pair-solution { background: #F3F0FF; border-left: 4px solid #6C5CE7; }
+  .sol-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+  }
+  .p1 .sol-icon { background: #C8F5E8; }
+  .p2 .sol-icon { background: #FFE5C0; }
+  .p3 .sol-icon { background: #E4DEFF; }
+  .sol-body h3 { font-size: 0.95rem; font-weight: 700; color: #222; margin-bottom: 6px; }
+  .sol-body p { font-size: 0.86rem; color: #444; line-height: 1.75; }
+  .sol-badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 8px; margin-top: 6px;
+  }
+  .p1 .sol-badge { background: #C8F5E8; color: #00A07A; }
+  .p2 .sol-badge { background: #FFE5C0; color: #CC7700; }
+  .p3 .sol-badge { background: #E4DEFF; color: #5A4CC7; }
+  @media (max-width: 640px) {
+    .pair-row { grid-template-columns: 1fr; }
+    .pair-problem { border-radius: 14px 14px 0 0; }
+    .pair-connector { height: 36px; }
+    .pair-connector::before { top: 0; bottom: 0; left: 50%; right: auto; width: 2px; height: 100%; transform: none; }
+    .pair-solution { border-radius: 0 0 14px 14px; border-left: none; border-top: 4px solid; }
+  }
 
   /* Tables */
   .tables-wrap {
@@ -122,107 +150,173 @@
   td .tag-o { background: #FFF3E0; color: #FF9100; }
   td .tag-p { background: #F0EDFF; color: #6C5CE7; }
   td .tag-r { background: #FFF0F3; color: #FA0050; }
+  /* Mini pipeline steps */
+  .mini-steps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .mini-step { font-size: 0.7rem; font-weight: 700; padding: 3px 9px; border-radius: 8px; white-space: nowrap; }
+  .mini-arrow { color: #aaa; font-size: 0.85rem; font-weight: 700; }
 
-  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
-  .nav a { display: inline-block; padding: 12px 32px; background: #FA0050; color: #fff; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
-  .nav a:hover { background: #e0004a; }
-  .nav a.back { background: #ddd; color: #555; }
-  .nav a.back:hover { background: #ccc; }
+  /* Step animation */
+  /* 초기: 문제 카드를 가운데로 이동 + 모서리 모두 둥글게 */
+  .pair-row .pair-problem {
+    transform: translateX(calc(50% + 26px));
+    border-radius: 14px;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+                border-radius 0.4s ease;
+  }
+  /* 초기: 커넥터·솔루션 숨김 (오른쪽 대기) */
+  .pair-row .pair-connector,
+  .pair-row .pair-solution {
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .pair-row .pair-solution {
+    transition-delay: 0.12s;
+  }
+  /* reveal 시: 문제는 왼쪽으로, 솔루션은 오른쪽에서 슬라이드인 */
+  .pair-row.revealed .pair-problem {
+    transform: translateX(0);
+    border-radius: 14px 0 0 14px;
+  }
+  .pair-row.revealed .pair-connector,
+  .pair-row.revealed .pair-solution {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Nav / step button */
+  .nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; align-items: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 12px 32px; background: #ddd; color: #555; text-decoration: none; border-radius: 30px; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+  .nav a:hover { background: #ccc; }
+  #next-btn {
+    display: inline-block; padding: 12px 36px;
+    background: #FA0050; color: #fff;
+    border: none; border-radius: 30px;
+    font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: background 0.2s, transform 0.1s;
+    font-family: inherit; text-decoration: none;
+  }
+  #next-btn:hover { background: #e0004a; }
+  #next-btn:active { transform: scale(0.97); }
+  .step-dots { display: flex; gap: 8px; align-items: center; }
+  .step-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #ddd; transition: background 0.3s;
+  }
+  .step-dot.active { background: #FA0050; }
   .page-indicator { text-align: center; margin-top: 16px; font-size: 0.8rem; color: #bbb; }
 </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">REVIEWTIME</div>
-    <h1><span>Review</span>Time</h1>
-    <p class="subtitle">AI 기반 리뷰 분석 플랫폼</p>
+    <div class="logo">어디가좋은데?</div>
+    <h1><span>어디가</span>좋은데?</h1>
+    <p class="subtitle">AI 기반 리뷰 분석 기능</p>
     <div class="tagline">리뷰 100개를 읽는 데 걸리는 시간? — 3초</div>
   </div>
 
-  <h2 class="section-title">문제 정의</h2>
-  <div class="problem-grid">
-    <div class="problem-card">
-      <div class="icon">📚</div>
-      <div class="situation">현황</div>
-      <h3>배달 앱에 리뷰가 쌓인다</h3>
-      <p>사장님도, 소비자도 수백 개의 리뷰를 다 읽을 수 없다. 정작 중요한 정보가 묻혀버린다.</p>
-    </div>
-    <div class="problem-card">
-      <div class="icon">⭐</div>
-      <div class="situation">문제</div>
-      <h3>별점만 보고 판단</h3>
-      <p>"4.0점이어도 최근 2주 동안 계속 떨어지고 있다면?" 트렌드 없이 숫자만으로는 판단이 어렵다.</p>
-    </div>
-    <div class="problem-card">
-      <div class="icon">🔍</div>
-      <div class="situation">한계</div>
-      <h3>리뷰 텍스트는 비정형</h3>
-      <p>음식/배달/서비스 중 어디가 문제인지 텍스트만으로는 빠르게 파악할 수 없다.</p>
-    </div>
-  </div>
-
-  <h2 class="section-title">솔루션 — <span>3가지 핵심 기술</span></h2>
-  <div class="solution-grid">
-    <div class="solution-card s1">
-      <div class="sol-icon">🌿</div>
-      <div class="sol-body">
-        <h3>형태소 분석 (kiwipiepy)</h3>
-        <p>로컬 실행으로 API 비용 없이 키워드 추출과 감성 태깅을 자동화합니다.</p>
-        <span class="sol-badge">비용 $0</span>
+  <h2 class="section-title">문제 정의 <span>→ 솔루션</span></h2>
+  <div class="pairs-grid">
+    <!-- Pair 1 -->
+    <div class="pair-row p1">
+      <div class="pair-problem">
+        <div class="icon">⭐</div>
+        <div class="situation">문제</div>
+        <h3>별점만 보고 판단</h3>
+        <p>"4.0점이어도 최근 2주 동안 계속 떨어지고 있다면?" 트렌드 없이 숫자만으로는 판단이 어렵다.</p>
+      </div>
+      <div class="pair-connector"><div class="arrow-circle">→</div></div>
+      <div class="pair-solution">
+        <div class="sol-icon">📈</div>
+        <div class="sol-body">
+          <h3>주별 트렌드 시각화</h3>
+          <ul style="margin:0;padding-left:1.1em;line-height:1.75;font-size:0.86rem;color:#444;">
+            <li>같은 4.0점도 오르고 있는지, 떨어지고 있는지 구분 가능</li>
+            <li>평균 뒤에 숨은 트렌드 변화까지 파악</li>
+            <li>숫자만으론 놓쳤던 맥락으로 정확한 판단 가능</li>
+          </ul>
+        </div>
       </div>
     </div>
-    <div class="solution-card s2">
-      <div class="sol-icon">🤖</div>
-      <div class="sol-body">
-        <h3>LLM 하이브리드 전략</h3>
-        <p>애매한 케이스 15~25%만 LLM에 전달하여 토큰 사용량을 25배 절약합니다.</p>
-        <span class="sol-badge">5,000→200 토큰</span>
+    <!-- Pair 2 -->
+    <div class="pair-row p2">
+      <div class="pair-problem">
+        <div class="icon">📚</div>
+        <div class="situation">현황</div>
+        <h3>계속 리뷰가 쌓인다</h3>
+        <p>사장님도, 소비자도 수백 개의 리뷰를 다 읽을 수 없다. 정작 중요한 정보가 묻혀버린다.</p>
+      </div>
+      <div class="pair-connector"><div class="arrow-circle">→</div></div>
+      <div class="pair-solution" style="flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="sol-icon">🤖</div>
+          <h3 style="font-size:0.95rem;font-weight:700;color:#222;">AI 주차별 리뷰 분석</h3>
+        </div>
+        <ul style="margin:0;padding-left:1.1em;line-height:1.75;font-size:0.86rem;color:#444;">
+          <li>수백 개 리뷰를 주차별로 자동 요약</li>
+          <li>긍정/부정 키워드로 핵심 이슈 바로 파악</li>
+          <li>직접 읽지 않아도 주요 변화 파악 가능</li>
+        </ul>
       </div>
     </div>
-    <div class="solution-card s3">
-      <div class="sol-icon">📈</div>
-      <div class="sol-body">
-        <h3>주별 트렌드 시각화</h3>
-        <p>별점을 주식 차트처럼 시가/종가/고가/저가로 표현하고 급변 알림으로 위기를 조기 감지합니다.</p>
-        <span class="sol-badge">실시간 모니터링</span>
+    <!-- Pair 3 -->
+    <div class="pair-row p3">
+      <div class="pair-problem">
+        <div class="icon">🔍</div>
+        <div class="situation">한계</div>
+        <h3>리뷰 텍스트는 비정형</h3>
+        <p>음식/배달/서비스 중 어디가 문제인지 텍스트만으로는 빠르게 파악할 수 없다.</p>
       </div>
-    </div>
-  </div>
-
-  <div class="tables-wrap">
-    <div class="table-card">
-      <h3>🛠 기술 스택</h3>
-      <table>
-        <thead><tr><th>영역</th><th>기술</th></tr></thead>
-        <tbody>
-          <tr><td>백엔드</td><td><span class="tag tag-p">Django (Python)</span></td></tr>
-          <tr><td>형태소 분석</td><td><span class="tag tag-g">kiwipiepy</span></td></tr>
-          <tr><td>LLM</td><td><span class="tag tag-o">Claude API</span></td></tr>
-          <tr><td>프론트엔드</td><td><span class="tag tag-r">Bootstrap 5 + Vanilla JS</span></td></tr>
-          <tr><td>데이터베이스</td><td><span class="tag tag-p">SQLite</span></td></tr>
-          <tr><td>이미지</td><td><span class="tag tag-g">업종별 SVG (12개 업종)</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="table-card">
-      <h3>📊 핵심 지표</h3>
-      <table>
-        <thead><tr><th>지표</th><th>수치</th></tr></thead>
-        <tbody>
-          <tr><td>분석 가능 리뷰 수</td><td><strong>100건/가게</strong></td></tr>
-          <tr><td>LLM 토큰 절약</td><td><strong>25배</strong></td></tr>
-          <tr><td>로컬 처리 비중</td><td><strong>75~85%</strong></td></tr>
-          <tr><td>분석 주기</td><td>월별 + 주별 (ISO 8601)</td></tr>
-          <tr><td>카테고리 분류</td><td>음식/배달/서비스/가격/위생</td></tr>
-          <tr><td>데모 가게 수</td><td><strong>12개 업종</strong></td></tr>
-        </tbody>
-      </table>
+      <div class="pair-connector"><div class="arrow-circle">→</div></div>
+      <div class="pair-solution">
+        <div class="sol-icon">🎯</div>
+        <div class="sol-body">
+          <h3>키워드로 원하는 리뷰 바로 확인</h3>
+          <ul class="sol-list" style="margin:0;padding-left:1.1em;line-height:1.75;font-size:0.86rem;color:#444;">
+            <li>원하는 키워드로 관련 리뷰만 골라서 확인</li>
+            <li>긍정·부정 리뷰를 구분해 필요한 내용만 집중</li>
+            <li>수백 개 중 내가 보고 싶은 리뷰만 빠르게 파악</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="nav">
-    <a href="02-pipeline.html">다음: AI 분석 파이프라인 &rarr;</a>
+    <div class="step-dots">
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <button id="next-btn">다음 &rarr;</button>
   </div>
-  <div class="page-indicator">1 / 6</div>
+  <div class="page-indicator">1 / 3</div>
+
+  <script>
+    let step = 0;
+    const rows = document.querySelectorAll('.pair-row');
+    const dots = document.querySelectorAll('.step-dot');
+    const btn = document.getElementById('next-btn');
+
+    function advance() {
+      if (step < rows.length) {
+        const el = rows[step];
+        el.classList.add('revealed');
+        dots[step].classList.add('active');
+        step++;
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+      } else {
+        window.location.href = '06-stakeholder.html';
+      }
+    }
+
+    btn.addEventListener('click', advance);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter') {
+        e.preventDefault();
+        advance();
+      }
+    });
+  </script>
 </body>
 </html>

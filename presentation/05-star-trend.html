@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ReviewTime - 별점 트렌드 시각화</title>
 <style>
+  html { font-size: 20px; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
+    word-break: keep-all;
     font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #f5f5f5;
     min-height: 100vh;
@@ -125,21 +127,21 @@
 <body>
   <div class="header">
     <div class="logo">REVIEWTIME</div>
-    <h1>별점을 주식 차트처럼</h1>
-    <p>시가/종가/고가/저가로 표현하는 리뷰 트렌드</p>
+    <h1>별점 시각화</h1>
+    <p>주별 별점 추이를 구간별로 시각화</p>
   </div>
 
-  <!-- Stock mapping table -->
+  <!-- Chart element descriptions -->
   <div class="stock-table-section">
-    <h2>📈 주식형 시각화 개념 매핑</h2>
+    <h2>📊 시각화 구성 요소</h2>
     <table>
-      <thead><tr><th>주식 용어</th><th>리뷰 적용</th><th>의미</th></tr></thead>
+      <thead><tr><th>구성 요소</th><th>의미</th><th>설명</th></tr></thead>
       <tbody>
-        <tr><td class="stock-term">시가</td><td class="review-term">기간 첫 주 평균 별점</td><td>기간 시작 시점 평가</td></tr>
-        <tr><td class="stock-term">종가</td><td class="review-term">최근 주 평균 별점</td><td>현재 평가</td></tr>
-        <tr><td class="stock-term">고가</td><td class="review-term">기간 내 최고 주 평균</td><td>최고 컨디션</td></tr>
-        <tr><td class="stock-term">저가</td><td class="review-term">기간 내 최저 주 평균</td><td>최저 컨디션</td></tr>
-        <tr><td class="stock-term">거래량</td><td class="review-term">리뷰 수</td><td>신뢰도 지표</td></tr>
+        <tr><td class="stock-term">시작 별점</td><td class="review-term">기간 첫 주 평균 별점</td><td>기간 시작 시점 평가</td></tr>
+        <tr><td class="stock-term">현재 별점</td><td class="review-term">최근 주 평균 별점</td><td>현재 평가</td></tr>
+        <tr><td class="stock-term">최고 별점</td><td class="review-term">기간 내 최고 주 평균</td><td>최고 컨디션</td></tr>
+        <tr><td class="stock-term">최저 별점</td><td class="review-term">기간 내 최저 주 평균</td><td>최저 컨디션</td></tr>
+        <tr><td class="stock-term">리뷰 수</td><td class="review-term">주차별 리뷰 건수</td><td>신뢰도 지표</td></tr>
         <tr><td class="stock-term">이동평균선</td><td class="review-term">4주 이동평균</td><td>단기 노이즈 제거한 추세</td></tr>
         <tr><td class="stock-term">변동률</td><td class="review-term">전주 대비 별점 변화%</td><td>개선/악화 속도</td></tr>
       </tbody>

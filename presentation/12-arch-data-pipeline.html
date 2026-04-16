@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>어디가좋은데? - 데이터 가공 아키텍처</title>
+<style>
+  html { font-size: 20px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    word-break: keep-all;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+    padding: 30px;
+  }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header .logo { display: inline-block; background: #FA0050; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+  .header h1 { font-size: 2rem; color: #222; margin-bottom: 8px; }
+  .header h1 span { color: #FA0050; }
+  .header p { font-size: 1rem; color: #888; }
+
+  .part-badge {
+    display: inline-block;
+    background: #FFF0F3;
+    color: #FA0050;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  /* 섹션 타이틀 */
+  .section-title { text-align: center; font-size: 1.1rem; font-weight: 700; color: #222; margin: 40px 0 16px; }
+  .section-title span { color: #FA0050; }
+  .section-desc { text-align: center; font-size: 0.8rem; color: #888; margin-bottom: 24px; }
+
+  /* 전체 파이프라인 다이어그램 */
+  .pipeline-wrap {
+    max-width: 980px;
+    margin: 0 auto 48px;
+  }
+
+  /* 레이어 박스 */
+  .layer {
+    border-radius: 20px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .layer-header .layer-icon { font-size: 1.1rem; }
+  .layer-body {
+    padding: 16px 24px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* 레이어 색상 */
+  .layer-bq    { background: #fff; border: 2px solid #4285F4; }
+  .layer-bq .layer-header { background: #4285F4; color: #fff; }
+
+  .layer-ai    { background: #fff; border: 2px solid #6C5CE7; }
+  .layer-ai .layer-header { background: #6C5CE7; color: #fff; }
+
+  .layer-sync  { background: #fff; border: 2px solid #00B894; }
+  .layer-sync .layer-header { background: #00B894; color: #fff; }
+
+  .layer-app   { background: #fff; border: 2px solid #FF9100; }
+  .layer-app .layer-header { background: #FF9100; color: #fff; }
+
+  /* 파이프라인 노드 */
+  .p-node {
+    background: #f8f8f8;
+    border-radius: 12px;
+    padding: 12px 18px;
+    text-align: center;
+    min-width: 130px;
+    flex: 1;
+  }
+  .p-node .p-icon { font-size: 1.3rem; margin-bottom: 6px; }
+  .p-node .p-label { font-size: 0.72rem; font-weight: 700; color: #222; }
+  .p-node .p-sub { font-size: 0.62rem; color: #999; margin-top: 3px; line-height: 1.4; }
+  .p-node.highlight-bq   { background: #EEF4FF; border: 1px solid #4285F4; }
+  .p-node.highlight-ai   { background: #F0EDFF; border: 1px solid #6C5CE7; }
+  .p-node.highlight-sync { background: #E8FFF5; border: 1px solid #00B894; }
+  .p-node.highlight-app  { background: #FFF3E0; border: 1px solid #FF9100; }
+
+  .p-arrow { font-size: 1.2rem; color: #ccc; flex-shrink: 0; padding: 0 4px; }
+  .p-arrow-down {
+    text-align: center;
+    font-size: 1.4rem;
+    color: #ccc;
+    margin: 6px 0;
+    line-height: 1;
+  }
+
+  /* 연결 화살표 (레이어 사이) */
+  .layer-connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 4px;
+  }
+  .layer-connector .conn-line {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(to bottom, #ddd, #bbb);
+    border-radius: 2px;
+    position: relative;
+  }
+  .layer-connector .conn-label {
+    font-size: 0.65rem;
+    color: #aaa;
+    background: #f5f5f5;
+    padding: 2px 10px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+  }
+
+  /* 상세 흐름 카드 */
+  .detail-grid {
+    max-width: 980px;
+    margin: 0 auto 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; } }
+
+  .detail-card {
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  .detail-card-header {
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .detail-card-header .dc-icon { font-size: 1.4rem; }
+  .detail-card-header h3 { font-size: 0.9rem; font-weight: 700; color: #fff; }
+  .detail-card-header p { font-size: 0.68rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
+  .dc-ai   .detail-card-header { background: linear-gradient(135deg, #6C5CE7, #A29BFE); }
+  .dc-bq   .detail-card-header { background: linear-gradient(135deg, #4285F4, #669DF6); }
+  .dc-sync .detail-card-header { background: linear-gradient(135deg, #00B894, #00CEC9); }
+  .dc-app  .detail-card-header { background: linear-gradient(135deg, #FF9100, #FFB347); }
+
+  .detail-card-body { padding: 20px 22px; }
+
+  /* 스텝 리스트 */
+  .step-list { display: flex; flex-direction: column; gap: 12px; }
+  .step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .step-num-sm {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    font-size: 0.6rem; font-weight: 800;
+    flex-shrink: 0; margin-top: 1px;
+    color: #fff;
+  }
+  .num-ai   { background: #6C5CE7; }
+  .num-bq   { background: #4285F4; }
+  .num-sync { background: #00B894; }
+  .num-app  { background: #FF9100; }
+
+  .step-item .step-text { font-size: 0.75rem; color: #555; line-height: 1.7; }
+  .step-item .step-text strong { color: #222; }
+  .step-item .step-text code {
+    background: #f5f5f5; color: #555;
+    font-size: 0.65rem; padding: 1px 6px;
+    border-radius: 4px; font-family: monospace;
+  }
+
+  /* 작은 배지 */
+  .tag { display: inline-block; font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; margin-right: 4px; }
+  .tag-ai    { background: #F0EDFF; color: #6C5CE7; }
+  .tag-bq    { background: #EEF4FF; color: #4285F4; }
+  .tag-sync  { background: #E8FFF5; color: #00B894; }
+  .tag-app   { background: #FFF3E0; color: #FF9100; }
+  .tag-red   { background: #FFF0F3; color: #FA0050; }
+
+  /* 시간축 타임라인 */
+  .timeline-wrap {
+    max-width: 980px;
+    margin: 0 auto 48px;
+  }
+  .timeline {
+    background: #fff;
+    border-radius: 18px;
+    padding: 28px 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  .tl-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 0;
+  }
+  .tl-row:not(:last-child) .tl-dot-col::after {
+    content: '';
+    display: block;
+    width: 2px;
+    height: 40px;
+    background: #e5e5e5;
+    margin: 4px auto 0;
+  }
+  .tl-dot-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 36px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .tl-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 3px solid;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .tl-dot.bq    { border-color: #4285F4; }
+  .tl-dot.ai    { border-color: #6C5CE7; }
+  .tl-dot.sync  { border-color: #00B894; }
+  .tl-dot.app   { border-color: #FF9100; }
+
+  .tl-content { flex: 1; padding: 0 0 32px 8px; }
+  .tl-label { font-size: 0.7rem; font-weight: 700; color: #999; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tl-title { font-size: 0.9rem; font-weight: 700; color: #222; margin-bottom: 8px; }
+  .tl-items { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tl-chip {
+    background: #f5f5f5; border-radius: 10px; padding: 6px 14px;
+    font-size: 0.72rem; color: #555; display: flex; align-items: center; gap: 6px;
+    border: 1px solid #eee;
+  }
+  .tl-chip .chip-icon { font-size: 0.9rem; }
+
+  /* 코드 블록 */
+  .code-wrap {
+    max-width: 980px;
+    margin: 0 auto 40px;
+    background: #1a1d2e;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .code-header {
+    background: #22263a;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .code-filename { font-size: 0.65rem; color: #8892b0; font-family: monospace; }
+  .code-body {
+    padding: 22px 26px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 0.7rem;
+    line-height: 1.85;
+    color: #cdd6f4;
+    overflow-x: auto;
+  }
+  .kw  { color: #ff79c6; }
+  .fn  { color: #50fa7b; }
+  .str { color: #f1fa8c; }
+  .cm  { color: #6272a4; font-style: italic; }
+  .num { color: #bd93f9; }
+  .var { color: #ffb86c; }
+  .cl  { color: #8be9fd; }
+
+  /* 핵심 포인트 박스 */
+  .point-wrap {
+    max-width: 980px;
+    margin: 0 auto 40px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 760px) { .point-wrap { grid-template-columns: 1fr; } }
+  .point-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 22px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    border-top: 4px solid;
+  }
+  .point-card.pc-bq   { border-color: #4285F4; }
+  .point-card.pc-ai   { border-color: #6C5CE7; }
+  .point-card.pc-app  { border-color: #00B894; }
+  .point-card .pc-icon { font-size: 1.6rem; margin-bottom: 10px; }
+  .point-card h4 { font-size: 0.82rem; font-weight: 700; color: #222; margin-bottom: 8px; }
+  .point-card p { font-size: 0.73rem; color: #666; line-height: 1.7; }
+  .point-card code { background: #f5f5f5; color: #555; font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; font-family: monospace; }
+
+  /* 네비 */
+  .nav { text-align: center; margin-top: 48px; display: flex; justify-content: center; gap: 16px; }
+  .nav a { display: inline-block; padding: 10px 24px; border-radius: 24px; font-size: 0.78rem; font-weight: 700; text-decoration: none; }
+  .nav-prev { background: #fff; color: #888; border: 1px solid #e0e0e0; }
+  .nav-next { background: #FA0050; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">ARCHITECTURE</div>
+  <div class="part-badge">데이터 가공 파이프라인</div>
+  <h1>BigQuery <span>→ AI 가공</span> → 앱 싱킹</h1>
+  <p>리뷰 데이터가 키워드·요약으로 가공되어 서비스에 제공되는 전체 흐름</p>
+</div>
+
+<!-- ① 전체 파이프라인 레이어 다이어그램 -->
+<div class="section-title">전체 <span>데이터 파이프라인</span> 구조</div>
+<div class="section-desc">각 레이어는 역할이 명확히 분리되어 있습니다</div>
+
+<div class="pipeline-wrap">
+
+  <!-- Layer 1: BigQuery 원본 -->
+  <div class="layer layer-bq">
+    <div class="layer-header">
+      <span class="layer-icon">🗄️</span>
+      <div>
+        <div>BigQuery — 원본 데이터 수집</div>
+        <div style="font-size:0.65rem;opacity:0.85;font-weight:400;margin-top:2px;">크롤러가 수집한 리뷰 원본이 적재되는 저장소</div>
+      </div>
+    </div>
+    <div class="layer-body">
+      <div class="p-node highlight-bq">
+        <div class="p-icon">🏪</div>
+        <div class="p-label">가게 정보</div>
+        <div class="p-sub">Store 메타데이터</div>
+      </div>
+      <div class="p-arrow">→</div>
+      <div class="p-node highlight-bq">
+        <div class="p-icon">⭐</div>
+        <div class="p-label">리뷰 원본</div>
+        <div class="p-sub">본문 · 평점 · 날짜</div>
+      </div>
+      <div class="p-arrow">→</div>
+      <div class="p-node highlight-bq">
+        <div class="p-icon">📅</div>
+        <div class="p-label">주차별 집계</div>
+        <div class="p-sub">주간 리뷰 묶음</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-connector">
+    <div class="conn-line"></div>
+    <div class="conn-label">BigQuery 내부에서 AI 가공 작업 수행</div>
+    <div class="conn-line"></div>
+  </div>
+
+  <!-- Layer 2: AI 가공 -->
+  <div class="layer layer-ai">
+    <div class="layer-header">
+      <span class="layer-icon">🤖</span>
+      <div>
+        <div>AI 가공 — BigQuery ML로 SQL 안에서 Gemini 직접 호출</div>
+        <div style="font-size:0.65rem;opacity:0.85;font-weight:400;margin-top:2px;">BigQuery ML · <code style="background:rgba(255,255,255,0.2);color:#fff;padding:1px 5px;border-radius:4px;font-size:0.62rem;">ML.GENERATE_TEXT</code> 함수로 Python 없이 SQL 한 줄로 Gemini 호출</div>
+      </div>
+    </div>
+    <div class="layer-body">
+      <div class="p-node highlight-ai">
+        <div class="p-icon">🔗</div>
+        <div class="p-label">Remote Model 등록</div>
+        <div class="p-sub">Vertex AI Gemini를<br>BQ Remote Model로 연결</div>
+      </div>
+      <div class="p-arrow">→</div>
+      <div class="p-node highlight-ai">
+        <div class="p-icon">✨</div>
+        <div class="p-label">ML.GENERATE_TEXT</div>
+        <div class="p-sub">SQL 내에서 Gemini 호출<br>키워드 + 요약 동시 생성</div>
+      </div>
+      <div class="p-arrow">→</div>
+      <div class="p-node highlight-ai">
+        <div class="p-icon">💾</div>
+        <div class="p-label">JSON 파싱 → 저장</div>
+        <div class="p-sub">JSON_VALUE로 추출 후<br>keyword_results INSERT</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-connector">
+    <div class="conn-line"></div>
+    <div class="conn-label">스케줄링 배치 — 정제된 데이터를 앱 DB로 싱킹</div>
+    <div class="conn-line"></div>
+  </div>
+
+  <!-- Layer 3: 스케줄 싱킹 -->
+  <div class="layer layer-sync">
+    <div class="layer-header">
+      <span class="layer-icon">🔄</span>
+      <div>
+        <div>Scheduler — BigQuery → App DB 싱킹</div>
+        <div style="font-size:0.65rem;opacity:0.85;font-weight:400;margin-top:2px;">정제가 완료된 데이터만 주기적으로 앱 데이터베이스에 반영</div>
+      </div>
+    </div>
+    <div class="layer-body">
+      <div class="p-node highlight-sync">
+        <div class="p-icon">⏰</div>
+        <div class="p-label">Cron 스케줄러</div>
+        <div class="p-sub">주기적 배치 실행</div>
+      </div>
+      <div class="p-arrow">→</div>
+      <div class="p-node highlight-sync">
+        <div class="p-icon">🔍</div>
+        <div class="p-label">변경분 감지</div>
+        <div class="p-sub">is_processed 기준<br>신규 데이터만 추출</div>
+      </div>
+      <div class="p-arrow">→</div>
+      <div class="p-node highlight-sync">
+        <div class="p-icon">💾</div>
+        <div class="p-label">App DB 반영</div>
+        <div class="p-sub">Keyword · Summary<br>테이블 upsert</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-connector">
+    <div class="conn-line"></div>
+    <div class="conn-label">API 서빙</div>
+    <div class="conn-line"></div>
+  </div>
+
+  <!-- Layer 4: Application -->
+  <div class="layer layer-app">
+    <div class="layer-header">
+      <span class="layer-icon">📱</span>
+      <div>
+        <div>Application — 정제 데이터 서빙</div>
+        <div style="font-size:0.65rem;opacity:0.85;font-weight:400;margin-top:2px;">앱은 BigQuery에 직접 접근하지 않고 싱킹된 App DB만 읽음</div>
+      </div>
+    </div>
+    <div class="layer-body">
+      <div class="p-node highlight-app">
+        <div class="p-icon">🏷️</div>
+        <div class="p-label">키워드 태그</div>
+        <div class="p-sub">긍·부정 뱃지 표시</div>
+      </div>
+      <div class="p-arrow">+</div>
+      <div class="p-node highlight-app">
+        <div class="p-icon">📊</div>
+        <div class="p-label">리뷰 요약</div>
+        <div class="p-sub">주차별 AI 요약 제공</div>
+      </div>
+      <div class="p-arrow">+</div>
+      <div class="p-node highlight-app">
+        <div class="p-icon">📈</div>
+        <div class="p-label">트렌드 분석</div>
+        <div class="p-sub">별점 흐름 · 감성 추이</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ② 상세 흐름 카드 — 키워드 / AI 요약 / 스케줄 / 앱 -->
+<div class="section-title"><span>키워드 추출</span> & <span>AI 요약</span> 상세 흐름</div>
+
+<div class="detail-grid">
+
+  <!-- 키워드 추출 -->
+  <div class="detail-card dc-ai">
+    <div class="detail-card-header">
+      <div class="dc-icon">🔑</div>
+      <div>
+        <h3>키워드 추출 흐름</h3>
+        <p>BQ SQL → ML.GENERATE_TEXT → keyword_results</p>
+      </div>
+    </div>
+    <div class="detail-card-body">
+      <div class="step-list">
+        <div class="step-item">
+          <span class="step-num-sm num-ai">1</span>
+          <div class="step-text">
+            <strong>Remote Model 등록</strong> (최초 1회)<br>
+            <code>CREATE MODEL</code>로 Vertex AI Gemini를 BigQuery Remote Model로 연결
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-ai">2</span>
+          <div class="step-text">
+            <strong>ML.GENERATE_TEXT 실행</strong><br>
+            <span class="tag tag-ai">SQL 1줄</span>로 미처리 리뷰에 Gemini 프롬프트 전송<br>
+            <code>prompt</code>에 "키워드와 감성 분류를 JSON으로 반환해줘" 지시
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-ai">3</span>
+          <div class="step-text">
+            <strong>JSON 응답 파싱</strong><br>
+            <code>JSON_VALUE</code> / <code>JSON_QUERY_ARRAY</code>로 <code>word</code>, <code>sentiment</code> 추출
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-ai">4</span>
+          <div class="step-text">
+            <strong>keyword_results 테이블 INSERT</strong><br>
+            <code>word · sentiment · shop_id · week</code> 컬럼으로 결과 저장
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-ai">5</span>
+          <div class="step-text">
+            <strong>처리 완료 플래그 업데이트</strong><br>
+            <code>UPDATE reviews SET is_processed = TRUE</code>로 재처리 방지
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 요약 -->
+  <div class="detail-card dc-bq">
+    <div class="detail-card-header">
+      <div class="dc-icon">📝</div>
+      <div>
+        <h3>AI 요약 흐름</h3>
+        <p>BQ SQL → ML.GENERATE_TEXT → summary_results</p>
+      </div>
+    </div>
+    <div class="detail-card-body">
+      <div class="step-list">
+        <div class="step-item">
+          <span class="step-num-sm num-bq">1</span>
+          <div class="step-text">
+            <strong>주차별 리뷰 집계 쿼리</strong><br>
+            <code>STRING_AGG</code>로 같은 가게·주차의 리뷰 본문을 하나로 연결
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-bq">2</span>
+          <div class="step-text">
+            <strong>ML.GENERATE_TEXT 요약 요청</strong><br>
+            <span class="tag tag-ai">BQ SQL</span> 안에서 Gemini에 "긍정 요약 / 부정 요약을 JSON으로" 지시
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-bq">3</span>
+          <div class="step-text">
+            <strong>JSON 응답 파싱</strong><br>
+            <code>JSON_VALUE(ml_generate_text_result, '$.positive')</code> 등으로 분리 추출
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-bq">4</span>
+          <div class="step-text">
+            <strong>summary_results 테이블 INSERT</strong><br>
+            <code>positive_summary · negative_summary · shop_id · week</code> 저장
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-bq">5</span>
+          <div class="step-text">
+            <strong>처리 완료 플래그 업데이트</strong><br>
+            <code>UPDATE reviews SET is_summarized = TRUE</code>로 재처리 방지
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 스케줄 싱킹 -->
+  <div class="detail-card dc-sync">
+    <div class="detail-card-header">
+      <div class="dc-icon">🔄</div>
+      <div>
+        <h3>스케줄 싱킹 흐름</h3>
+        <p>BigQuery 정제 완료분 → App DB</p>
+      </div>
+    </div>
+    <div class="detail-card-body">
+      <div class="step-list">
+        <div class="step-item">
+          <span class="step-num-sm num-sync">1</span>
+          <div class="step-text">
+            <strong>스케줄러 트리거</strong><br>
+            <span class="tag tag-sync">Cron</span> 주기적으로 배치 잡 실행 (예: 매일 새벽 3시)
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-sync">2</span>
+          <div class="step-text">
+            <strong>정제 완료 데이터 추출</strong><br>
+            BigQuery에서 <code>is_processed=True</code>이고 아직 싱킹 안 된 레코드만 쿼리
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-sync">3</span>
+          <div class="step-text">
+            <strong>App DB upsert</strong><br>
+            Keyword · ShopWeekReview · Summary 테이블에 벌크 upsert
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-sync">4</span>
+          <div class="step-text">
+            <strong>싱킹 완료 마킹</strong><br>
+            <code>is_synced=True</code>로 업데이트해 다음 배치에서 스킵
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App 서빙 -->
+  <div class="detail-card dc-app">
+    <div class="detail-card-header">
+      <div class="dc-icon">📱</div>
+      <div>
+        <h3>Application 서빙</h3>
+        <p>싱킹된 App DB → REST API → 클라이언트</p>
+      </div>
+    </div>
+    <div class="detail-card-body">
+      <div class="step-list">
+        <div class="step-item">
+          <span class="step-num-sm num-app">1</span>
+          <div class="step-text">
+            <strong>App DB만 직접 읽기</strong><br>
+            BigQuery에 직접 접근 없이 싱킹된 데이터만 사용 → <span class="tag tag-sync">지연 없는 응답</span>
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-app">2</span>
+          <div class="step-text">
+            <strong>키워드 태그 API</strong><br>
+            가게별 <code>Keyword</code> 목록 + 감성 레이블 제공
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-app">3</span>
+          <div class="step-text">
+            <strong>리뷰 요약 API</strong><br>
+            주차별 AI 요약문(<code>positive / negative summary</code>) 제공
+          </div>
+        </div>
+        <div class="step-item">
+          <span class="step-num-sm num-app">4</span>
+          <div class="step-text">
+            <strong>트렌드 데이터 API</strong><br>
+            주차별 감성 비율, 별점 추이 차트용 집계 데이터 제공
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ③ 타임라인 — 실행 순서 -->
+<div class="section-title">실행 <span>타임라인</span></div>
+<div class="section-desc">크롤링부터 앱 서빙까지 단계별 실행 순서</div>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+
+    <div class="tl-row">
+      <div class="tl-dot-col">
+        <div class="tl-dot bq"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-label"><span class="tag tag-bq">BigQuery</span></div>
+        <div class="tl-title">리뷰 원본 수집 · 적재</div>
+        <div class="tl-items">
+          <div class="tl-chip"><span class="chip-icon">🕷️</span>크롤러 실행</div>
+          <div class="tl-chip"><span class="chip-icon">🗄️</span>BQ 테이블 적재</div>
+          <div class="tl-chip"><span class="chip-icon">🏷️</span>is_processed = False</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-row">
+      <div class="tl-dot-col">
+        <div class="tl-dot ai"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-label"><span class="tag tag-ai">BigQuery ML</span></div>
+        <div class="tl-title">ML.GENERATE_TEXT — 키워드 + 요약 동시 생성</div>
+        <div class="tl-items">
+          <div class="tl-chip"><span class="chip-icon">🔗</span>Remote Model 호출</div>
+          <div class="tl-chip"><span class="chip-icon">✨</span>ML.GENERATE_TEXT SQL 실행</div>
+          <div class="tl-chip"><span class="chip-icon">💾</span>keyword_results · summary_results INSERT</div>
+          <div class="tl-chip"><span class="chip-icon">✅</span>is_processed = TRUE</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-row">
+      <div class="tl-dot-col">
+        <div class="tl-dot sync"></div>
+      </div>
+      <div class="tl-content">
+        <div class="tl-label"><span class="tag tag-sync">스케줄러</span></div>
+        <div class="tl-title">App DB 싱킹</div>
+        <div class="tl-items">
+          <div class="tl-chip"><span class="chip-icon">⏰</span>Cron 배치 실행</div>
+          <div class="tl-chip"><span class="chip-icon">💾</span>Keyword · Summary upsert</div>
+          <div class="tl-chip"><span class="chip-icon">🔒</span>is_synced = True</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-row">
+      <div class="tl-dot-col">
+        <div class="tl-dot app"></div>
+      </div>
+      <div class="tl-content" style="padding-bottom:0;">
+        <div class="tl-label"><span class="tag tag-app">Application</span></div>
+        <div class="tl-title">API 서빙</div>
+        <div class="tl-items">
+          <div class="tl-chip"><span class="chip-icon">🏷️</span>키워드 태그 제공</div>
+          <div class="tl-chip"><span class="chip-icon">📊</span>AI 요약 제공</div>
+          <div class="tl-chip"><span class="chip-icon">📈</span>트렌드 차트 제공</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ④ 핵심 설계 포인트 -->
+<div class="section-title">핵심 <span>설계 포인트</span></div>
+
+<div class="point-wrap">
+  <div class="point-card pc-bq">
+    <div class="pc-icon">✨</div>
+    <h4>Python 없이 SQL 한 줄로 AI</h4>
+    <p>
+      <code>ML.GENERATE_TEXT</code> 함수 하나로 BigQuery SQL 안에서 Gemini 직접 호출.<br>
+      별도 Python 서버·API 관리 없이 데이터 파이프라인을 SQL로만 완결.
+    </p>
+  </div>
+  <div class="point-card pc-ai">
+    <div class="pc-icon">🔄</div>
+    <h4>스케줄 싱킹으로 역할 분리</h4>
+    <p>
+      <code>is_processed</code> 플래그로 BQ 처리 여부 추적.<br>
+      배치가 변경분만 감지해 App DB에 upsert → 중복 처리 없음.
+    </p>
+  </div>
+  <div class="point-card pc-app">
+    <div class="pc-icon">⚡</div>
+    <h4>App은 읽기 전용</h4>
+    <p>
+      Application은 BigQuery에 직접 쿼리하지 않음.<br>
+      싱킹된 App DB만 사용해 응답 속도·비용·부하 모두 최적화.
+    </p>
+  </div>
+</div>
+
+<!-- ⑤ BigQuery ML SQL 예시 -->
+<div class="section-title"><span>BigQuery ML</span> 실제 SQL</div>
+<div class="section-desc">Python 없이 SQL 안에서 Gemini 호출 — Remote Model 등록 → ML.GENERATE_TEXT → JSON 파싱 → INSERT</div>
+
+<div class="code-wrap">
+  <div class="code-header">
+    <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+    <div class="code-filename">bigquery_ml_keyword_summary.sql</div>
+  </div>
+  <div class="code-body"><span class="cm">-- ① Vertex AI Gemini를 BigQuery Remote Model로 등록 (최초 1회)</span>
+<span class="kw">CREATE OR REPLACE MODEL</span> <span class="cl">`project.dataset.gemini_model`</span>
+  <span class="kw">REMOTE WITH CONNECTION</span> <span class="cl">`project.region.vertex-connection`</span>
+  <span class="kw">OPTIONS</span> (<span class="var">endpoint</span> = <span class="str">'gemini-1.5-flash'</span>);
+
+<span class="cm">-- ② 키워드 추출: 미처리 리뷰에 ML.GENERATE_TEXT 실행</span>
+<span class="kw">INSERT INTO</span> <span class="cl">`project.dataset.keyword_results`</span>
+  (word, sentiment, shop_id, week)
+<span class="kw">WITH</span> <span class="var">ai_response</span> <span class="kw">AS</span> (
+  <span class="kw">SELECT</span>
+    r.shop_id,
+    r.week,
+    <span class="fn">ML.GENERATE_TEXT</span>(
+      <span class="kw">MODEL</span> <span class="cl">`project.dataset.gemini_model`</span>,
+      (<span class="kw">SELECT</span> <span class="fn">CONCAT</span>(
+        <span class="str">'다음 리뷰에서 핵심 키워드와 감성(positive/negative/neutral)을 '</span>,
+        <span class="str">'JSON 배열 [{word, sentiment}] 형식으로만 반환하세요.\n리뷰: '</span>,
+        r.content
+      ) <span class="kw">AS</span> <span class="var">prompt</span>),
+      <span class="kw">STRUCT</span>(<span class="num">0.1</span> <span class="kw">AS</span> <span class="var">temperature</span>, <span class="num">512</span> <span class="kw">AS</span> <span class="var">max_output_tokens</span>)
+    ) <span class="kw">AS</span> <span class="var">result</span>
+  <span class="kw">FROM</span> <span class="cl">`project.dataset.reviews`</span> r
+  <span class="kw">WHERE</span> r.is_processed = <span class="kw">FALSE</span>
+)
+<span class="kw">SELECT</span>
+  <span class="fn">JSON_VALUE</span>(kw, <span class="str">'$.word'</span>)      <span class="kw">AS</span> <span class="var">word</span>,
+  <span class="fn">JSON_VALUE</span>(kw, <span class="str">'$.sentiment'</span>) <span class="kw">AS</span> <span class="var">sentiment</span>,
+  <span class="var">ar</span>.shop_id,
+  <span class="var">ar</span>.week
+<span class="kw">FROM</span> <span class="var">ai_response</span> ar,
+  <span class="fn">UNNEST</span>(<span class="fn">JSON_QUERY_ARRAY</span>(
+    <span class="fn">JSON_VALUE</span>(<span class="var">ar</span>.result.ml_generate_text_result, <span class="str">'$.candidates[0].content.parts[0].text'</span>)
+  )) <span class="kw">AS</span> kw;
+
+<span class="cm">-- ③ 요약 생성: 주차별 리뷰 묶어서 긍/부정 요약 동시 추출</span>
+<span class="kw">INSERT INTO</span> <span class="cl">`project.dataset.summary_results`</span>
+  (shop_id, week, positive_summary, negative_summary)
+<span class="kw">WITH</span> <span class="var">weekly_reviews</span> <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> shop_id, week,
+    <span class="fn">STRING_AGG</span>(content, <span class="str">'\n'</span>) <span class="kw">AS</span> <span class="var">all_reviews</span>
+  <span class="kw">FROM</span> <span class="cl">`project.dataset.reviews`</span>
+  <span class="kw">GROUP BY</span> shop_id, week
+),
+<span class="var">ai_summary</span> <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> shop_id, week,
+    <span class="fn">ML.GENERATE_TEXT</span>(
+      <span class="kw">MODEL</span> <span class="cl">`project.dataset.gemini_model`</span>,
+      (<span class="kw">SELECT</span> <span class="fn">CONCAT</span>(
+        <span class="str">'다음 리뷰들의 긍정 포인트와 부정 포인트를 각각 한 문장으로 요약해주세요. '</span>,
+        <span class="str">'{"positive": "...", "negative": "..."} JSON으로만 반환하세요.\n리뷰:\n'</span>,
+        <span class="var">wr</span>.all_reviews
+      ) <span class="kw">AS</span> <span class="var">prompt</span>),
+      <span class="kw">STRUCT</span>(<span class="num">0.3</span> <span class="kw">AS</span> <span class="var">temperature</span>)
+    ) <span class="kw">AS</span> <span class="var">result</span>
+  <span class="kw">FROM</span> <span class="var">weekly_reviews</span> wr
+)
+<span class="kw">SELECT</span>
+  shop_id, week,
+  <span class="fn">JSON_VALUE</span>(<span class="fn">JSON_VALUE</span>(<span class="var">result</span>.ml_generate_text_result, <span class="str">'$.candidates[0].content.parts[0].text'</span>), <span class="str">'$.positive'</span>) <span class="kw">AS</span> <span class="var">positive_summary</span>,
+  <span class="fn">JSON_VALUE</span>(<span class="fn">JSON_VALUE</span>(<span class="var">result</span>.ml_generate_text_result, <span class="str">'$.candidates[0].content.parts[0].text'</span>), <span class="str">'$.negative'</span>) <span class="kw">AS</span> <span class="var">negative_summary</span>
+<span class="kw">FROM</span> <span class="var">ai_summary</span>;
+
+<span class="cm">-- ④ 처리 완료 마킹</span>
+<span class="kw">UPDATE</span> <span class="cl">`project.dataset.reviews`</span>
+<span class="kw">SET</span> is_processed = <span class="kw">TRUE</span>
+<span class="kw">WHERE</span> is_processed = <span class="kw">FALSE</span>;
+</div>
+</div>
+
+<div class="nav">
+  <a href="11-tech-part3.html" class="nav-prev">← Part3: 키워드 추출</a>
+  <a href="01-overview.html" class="nav-next">처음으로 →</a>
+</div>
+
+</body>
+</html>
