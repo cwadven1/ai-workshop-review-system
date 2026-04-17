@@ -75,7 +75,7 @@ class ShopWeekReview(models.Model):
         return f"{self.shop.name} {self.year}-W{self.week_number:02d}"
 
 
-class ShopWeekSentimentReveiw(models.Model):
+class ShopWeekReviewSentiment(models.Model):
     SENTIMENT_CHOICES = [
         ("positive", "긍정"),
         ("negative", "부정"),
@@ -158,6 +158,110 @@ class Keyword(models.Model):
 
     def __str__(self):
         return self.word
+
+
+class AIAnalysisJob(models.Model):
+    """LLM 분석 작업 이력 — 스케줄/수동 각 1회 호출 후 결과 저장"""
+
+    TRIGGER_CHOICES = [
+        ("schedule", "스케줄"),
+        ("manual", "수동"),
+    ]
+    STATUS_CHOICES = [
+        ("pending", "대기"),
+        ("running", "실행 중"),
+        ("completed", "완료"),
+        ("failed", "실패"),
+    ]
+
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="ai_jobs", verbose_name="가게")
+    status = models.CharField("상태", max_length=20, choices=STATUS_CHOICES, default="pending")
+    triggered_by = models.CharField("트리거", max_length=20, choices=TRIGGER_CHOICES, default="schedule")
+    source_week = models.ForeignKey(
+        "ShopWeekReview", on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name="기준 주차", related_name="ai_jobs"
+    )
+    raw_response = models.TextField("LLM 원본 응답", blank=True)
+    error_message = models.TextField("오류 메시지", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField("완료 시각", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "AI 분석 작업"
+        verbose_name_plural = "AI 분석 작업"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.store.name} [{self.get_status_display()}] {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class AIActionItem(models.Model):
+    """사장님 할일 목록 — LLM 분석에서 파생, 누적 관리"""
+
+    LEVEL_CHOICES = [
+        ("danger", "위험"),
+        ("warning", "주의"),
+        ("info", "정보"),
+        ("success", "긍정"),
+    ]
+    PRIORITY_CHOICES = [
+        ("high", "높음"),
+        ("medium", "보통"),
+        ("low", "낮음"),
+    ]
+    TYPE_CHOICES = [
+        ("action", "개선 할일"),
+        ("strength", "강점 인사이트"),
+    ]
+    STATUS_CHOICES = [
+        ("open", "미처리"),
+        ("in_progress", "처리 중"),
+        ("completed", "완료"),
+        ("dismissed", "기각"),
+        ("confirmed", "확인됨"),
+    ]
+
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="action_items", verbose_name="가게")
+    source_job = models.ForeignKey(
+        AIAnalysisJob, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="action_items", verbose_name="출처 작업"
+    )
+    title = models.CharField("제목", max_length=200)
+    description = models.TextField("설명")
+    action_detail = models.TextField("구체적 조치")
+    level = models.CharField("레벨", max_length=20, choices=LEVEL_CHOICES, default="info")
+    priority = models.CharField("우선순위", max_length=20, choices=PRIORITY_CHOICES, default="medium")
+    status = models.CharField("상태", max_length=20, choices=STATUS_CHOICES, default="open")
+    completed_at = models.DateTimeField("완료 시각", null=True, blank=True)
+    completed_note = models.TextField("완료 메모", blank=True)
+    link_url = models.CharField("관련 링크 URL", max_length=500, blank=True)
+    link_label = models.CharField("관련 링크 텍스트", max_length=100, blank=True)
+    item_type = models.CharField("아이템 유형", max_length=20, choices=TYPE_CHOICES, default="action")
+    week_year = models.IntegerField("집계 연도")
+    week_number = models.IntegerField("집계 주차")
+    is_ai_generated = models.BooleanField("AI 생성 여부", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "AI 액션 아이템"
+        verbose_name_plural = "AI 액션 아이템"
+        ordering = [
+            models.Case(
+                models.When(priority="high", then=0),
+                models.When(priority="medium", then=1),
+                models.When(priority="low", then=2),
+                default=3,
+                output_field=models.IntegerField(),
+            ),
+            "-created_at",
+        ]
+        indexes = [
+            models.Index(fields=["store", "status"], name="idx_action_store_status"),
+        ]
+
+    def __str__(self):
+        return f"{self.store.name} — {self.title} [{self.get_status_display()}]"
 
 
 class ShopWeekReviewKeyword(models.Model):

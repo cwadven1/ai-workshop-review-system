@@ -22,4 +22,19 @@ urlpatterns = [
         review_views.trends_data,
         name="trends-data",
     ),
+    path(
+        "stores/<int:store_id>/owner/",
+        store_views.owner_dashboard,
+        name="owner-dashboard",
+    ),
+    path(
+        "stores/<int:store_id>/owner/trigger-analysis/",
+        store_views.trigger_analysis,
+        name="trigger-analysis",
+    ),
+    path(
+        "action-items/<int:item_id>/update/",
+        store_views.update_action_item,
+        name="update-action-item",
+    ),
 ]

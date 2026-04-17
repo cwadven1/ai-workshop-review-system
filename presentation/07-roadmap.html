@@ -138,6 +138,56 @@
   .phase-2 .feature-chip { background: #FFF0F3; border-color: #FFBDCB; color: #C7003A; }
   .phase-3 .feature-chip { background: #E6FAF4; border-color: #A3E8D2; color: #007A5E; }
 
+  /* ── Perspective split (사용자 / 사장님) ── */
+  .perspective-split {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .perspective-col {
+    flex: 1;
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .perspective-col.user-col {
+    background: #FFF5F7;
+    border: 1.5px solid #FFBDCB;
+  }
+  .perspective-col.owner-col {
+    background: #FFF8EC;
+    border: 1.5px solid #FFD898;
+  }
+  .perspective-col-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .user-col .perspective-col-title { color: #C7003A; }
+  .owner-col .perspective-col-title { color: #B06000; }
+  .perspective-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .perspective-col ul li {
+    font-size: 0.8rem;
+    color: #555;
+    line-height: 1.5;
+    padding-left: 16px;
+    position: relative;
+  }
+  .perspective-col ul li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+    color: #aaa;
+  }
+
   /* ── Animation ── */
   .anim-phase {
     opacity: 0;
@@ -254,6 +304,24 @@
         <div class="phase-desc">
           주차별 리뷰 내용을 자동 요약하고, 평점 증감의 원인을 분석해 제공합니다.<br>
           단순 수치 변화가 아닌 왜 변했는지의 맥락을 전달합니다.
+        </div>
+        <div class="perspective-split">
+          <div class="perspective-col user-col">
+            <div class="perspective-col-title">👤 소비자</div>
+            <ul>
+              <li>주문 전 "요즘 이 가게 어때?" 한눈에 확인</li>
+              <li>최근 주차 평점 변화 이유를 텍스트로 파악</li>
+              <li>실제 리뷰 인용으로 신뢰도 높은 정보 제공</li>
+            </ul>
+          </div>
+          <div class="perspective-col owner-col">
+            <div class="perspective-col-title">🏪 사장님</div>
+            <ul>
+              <li>이번 주 평점 변화 원인 자동 진단</li>
+              <li>어떤 이슈가 반복되는지 주차별 패턴 파악</li>
+              <li>리뷰 전체를 읽지 않아도 핵심 요약 제공</li>
+            </ul>
+          </div>
         </div>
         <div class="feature-list">
           <div class="feature-chip">📝 주차별 리뷰 자동 요약</div>

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 
 from reviews.models import Review
-from stores.models import Keyword, Menu, ShopRecentReview, ShopRecentReviewSentiment, ShopWeekReview, ShopWeekSentimentReveiw, ShopWeekReviewKeyword, Store
+from stores.models import Keyword, Menu, ShopRecentReview, ShopRecentReviewSentiment, ShopWeekReview, ShopWeekReviewSentiment, ShopWeekReviewKeyword, Store
 
 
 # 최근 N주 (year, week_num) 튜플 리스트 생성
@@ -562,7 +562,7 @@ class Command(BaseCommand):
     )
 
     def _create_shop_week_review(self, store, year, week_number, reviews):
-        """ShopWeekReview + ShopWeekSentimentReveiw + ShopWeekReviewKeyword 생성"""
+        """ShopWeekReview + ShopWeekReviewSentiment + ShopWeekReviewKeyword 생성"""
         ratings = [r.rating for r in reviews]
         average = round(sum(ratings) / len(ratings), 1) if ratings else 0.0
 
@@ -626,19 +626,19 @@ class Command(BaseCommand):
         else:
             neg_content = f"{store.name}의 {week_number}주차 부정 리뷰가 없습니다."
 
-        ShopWeekSentimentReveiw.objects.create(
+        ShopWeekReviewSentiment.objects.create(
             shop_week_review=swr,
             sentiment="positive",
             content=pos_content,
             created_at=swr.updated_at,
         )
-        ShopWeekSentimentReveiw.objects.create(
+        ShopWeekReviewSentiment.objects.create(
             shop_week_review=swr,
             sentiment="negative",
             content=neg_content,
             created_at=swr.updated_at,
         )
-        ShopWeekSentimentReveiw.objects.create(
+        ShopWeekReviewSentiment.objects.create(
             shop_week_review=swr,
             sentiment="neutral",
             content=summary_text,

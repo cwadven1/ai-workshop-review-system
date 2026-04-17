@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Keyword, Menu, ShopWeekReview, ShopWeekSentimentReveiw, ShopWeekReviewKeyword, Store
+from .models import Keyword, Menu, ShopWeekReview, ShopWeekReviewSentiment, ShopWeekReviewKeyword, Store
 
 
 class MenuInline(admin.TabularInline):
@@ -29,8 +29,8 @@ class ShopWeekReviewAdmin(admin.ModelAdmin):
     search_fields = ("shop__name",)
 
 
-@admin.register(ShopWeekSentimentReveiw)
-class ShopWeekSentimentReveiwAdmin(admin.ModelAdmin):
+@admin.register(ShopWeekReviewSentiment)
+class ShopWeekReviewSentimentAdmin(admin.ModelAdmin):
     list_display = ("shop_week_review", "sentiment", "created_at", "updated_at")
 
 

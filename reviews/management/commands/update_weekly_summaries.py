@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from reviews.models import Review
-from stores.models import Keyword, ShopWeekReview, ShopWeekSentimentReveiw, ShopWeekReviewKeyword, Store
+from stores.models import Keyword, ShopWeekReview, ShopWeekReviewSentiment, ShopWeekReviewKeyword, Store
 
 
 class Command(BaseCommand):
@@ -111,7 +111,7 @@ class Command(BaseCommand):
                 existing.negative_count = 0
                 existing.neutral_count = 0
                 existing.save()
-                ShopWeekSentimentReveiw.objects.create(
+                ShopWeekReviewSentiment.objects.create(
                     shop_week_review=existing,
                     sentiment="neutral",
                     content="",
@@ -150,7 +150,7 @@ class Command(BaseCommand):
                 updated += 1
                 self.stdout.write(f"  [갱신] {store.name} {year}-W{week_number:02d} — {stats['count']}건")
 
-            ShopWeekSentimentReveiw.objects.create(
+            ShopWeekReviewSentiment.objects.create(
                 shop_week_review=swr,
                 sentiment="neutral",
                 content=summary_text,

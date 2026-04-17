@@ -1,5 +1,5 @@
 """
-증분 업데이트 커맨드: ShopWeekReview / ShopWeekSentimentReveiw를 변경된 리뷰만 감지해서 재계산.
+증분 업데이트 커맨드: ShopWeekReview / ShopWeekReviewSentiment를 변경된 리뷰만 감지해서 재계산.
 
 변경 감지 기준 (OR):
   - Review.created_at  > ShopWeekReview.updated_at  (새 리뷰)
@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from reviews.models import Review
-from stores.models import Keyword, ShopWeekReview, ShopWeekSentimentReveiw, ShopWeekReviewKeyword, Store
+from stores.models import Keyword, ShopWeekReview, ShopWeekReviewSentiment, ShopWeekReviewKeyword, Store
 
 
 class Command(BaseCommand):
@@ -189,19 +189,19 @@ class Command(BaseCommand):
         else:
             neg_content = f"{store.name}의 {week_number}주차 부정 리뷰가 없습니다."
 
-        ShopWeekSentimentReveiw.objects.create(
+        ShopWeekReviewSentiment.objects.create(
             shop_week_review=swr,
             sentiment="positive",
             content=pos_content,
             created_at=swr.updated_at,
         )
-        ShopWeekSentimentReveiw.objects.create(
+        ShopWeekReviewSentiment.objects.create(
             shop_week_review=swr,
             sentiment="negative",
             content=neg_content,
             created_at=swr.updated_at,
         )
-        ShopWeekSentimentReveiw.objects.create(
+        ShopWeekReviewSentiment.objects.create(
             shop_week_review=swr,
             sentiment="neutral",
             content=summary_text,

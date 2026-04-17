@@ -264,7 +264,7 @@
           <td><span class="badge" style="background:#9b59b6;color:#fff;font-size:10px;padding:2px 5px;border-radius:4px;">AI</span></td>
           <td class="field-name">summary</td>
           <td class="field-type">TextField</td>
-          <td class="field-desc">AI 생성 주차 전체 요약 (GPT-4o-mini)</td>
+          <td class="field-desc">AI 생성 주차 전체 요약 (Gemini)</td>
         </tr>
         <tr>
           <td></td>
@@ -295,63 +295,6 @@
           <td class="field-name">updated_at</td>
           <td class="field-type">DateTimeField</td>
           <td class="field-desc">레코드 수정 일시 (auto_now)</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- ShopWeekSentimentReveiw 모델 -->
-  <h2 class="section-title"><span>ShopWeekSentimentReveiw</span> 모델</h2>
-  <div class="table-wrap">
-    <div class="table-header" style="justify-content: space-between;">
-      <span>🗂 ShopWeekSentimentReveiw</span>
-      <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:12px; font-weight:400;">ShopWeekReview N:1 — 감성별 분석 결과 누적 · 최신 3개 표시</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:52px">타입</th>
-          <th style="width:160px">필드명</th>
-          <th style="width:140px">타입</th>
-          <th>설명</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="badge badge-pk">PK</span></td>
-          <td class="field-name">id</td>
-          <td class="field-type">AutoField</td>
-          <td class="field-desc">기본 키 (자동 증가)</td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-fk">FK</span></td>
-          <td class="field-name">shop_week_review_id</td>
-          <td class="field-type">ForeignKey</td>
-          <td class="field-desc">ShopWeekReview 참조 (N:1)</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td class="field-name">sentiment</td>
-          <td class="field-type">CharField</td>
-          <td class="field-desc">감성 분류 (positive / negative / neutral)</td>
-        </tr>
-        <tr>
-          <td><span class="badge badge-ai">AI</span></td>
-          <td class="field-name">content</td>
-          <td class="field-type">TextField</td>
-          <td class="field-desc">AI 생성 감성 분석 내용 (GPT-4o-mini)</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td class="field-name">created_at</td>
-          <td class="field-type">DateTimeField</td>
-          <td class="field-desc">생성 일시</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td class="field-name">updated_at</td>
-          <td class="field-type">DateTimeField</td>
-          <td class="field-desc">수정 일시</td>
         </tr>
       </tbody>
     </table>

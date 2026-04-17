@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from reviews.models import Review
-from stores.models import Keyword, ShopWeekReview, ShopWeekSentimentReveiw, ShopWeekReviewKeyword, Store
+from stores.models import Keyword, ShopWeekReview, ShopWeekReviewSentiment, ShopWeekReviewKeyword, Store
 
 
 class Command(BaseCommand):
@@ -83,30 +83,33 @@ class Command(BaseCommand):
 
         if isinstance(summary_text, dict):
             positive_contents = summary_text.get("positive_contents", [])
+            if isinstance(positive_contents, str):
+                positive_contents = [positive_contents]
             negative_contents = summary_text.get("negative_contents", [])
+            if isinstance(negative_contents, str):
+                negative_contents = [negative_contents]
+            neutral_contents = summary_text.get("neutral_contents", [])
+            if isinstance(neutral_contents, str):
+                neutral_contents = [neutral_contents]
             overall = summary_text.get("summary", "")
         else:
             positive_contents = []
             negative_contents = []
+            neutral_contents = []
             overall = summary_text
 
         swr.summary = overall
         swr.save(update_fields=["summary"])
 
-        for content_val in positive_contents:
-            ShopWeekSentimentReveiw.objects.create(
-                shop_week_review=swr,
-                sentiment="positive",
-                content=content_val,
-                created_at=swr.updated_at,
-            )
-        for content_val in negative_contents:
-            ShopWeekSentimentReveiw.objects.create(
-                shop_week_review=swr,
-                sentiment="negative",
-                content=content_val,
-                created_at=swr.updated_at,
-            )
+        # 재실행 시 중복 방지: 기존 sentiment rows 삭제
+        ShopWeekReviewSentiment.objects.filter(shop_week_review=swr).delete()
+
+        sentiment_rows = (
+            [ShopWeekReviewSentiment(shop_week_review=swr, sentiment="positive", content=c, created_at=swr.updated_at) for c in positive_contents]
+            + [ShopWeekReviewSentiment(shop_week_review=swr, sentiment="negative", content=c, created_at=swr.updated_at) for c in negative_contents]
+            + [ShopWeekReviewSentiment(shop_week_review=swr, sentiment="neutral", content=c, created_at=swr.updated_at) for c in neutral_contents]
+        )
+        ShopWeekReviewSentiment.objects.bulk_create(sentiment_rows)
 
         swr.review_keywords.all().delete()
         for word, cnt in keyword_counts.items():
@@ -122,7 +125,8 @@ class Command(BaseCommand):
 
     def _generate_with_gemini(self, api_key, store_name, week_number, review_texts, average, sentiments, top_pos_kw, top_neg_kw):
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
 
             # 실제 리뷰 텍스트 샘플 (최대 15건, 비어있는 것 제외)
             non_empty = [t for t in review_texts if t and t.strip()]
@@ -147,23 +151,23 @@ class Command(BaseCommand):
 - 부정: {top_neg_kw}
 
 아래 JSON 형식으로만 응답해주세요.
-positive_contents 와 negative_contents 는 빈 리스트 값이 될 수 있습니다.
+각 배열의 항목은 반드시 하나의 구체적 포인트만 담은 1문장이어야 합니다. 여러 내용을 한 항목에 묶지 마세요.
+배열이 비어있는 경우 빈 리스트([])로 응답해주세요.
 {{
   "summary": "이 가게만의 특색과 고객이 반복적으로 언급하는 핵심 경험을 3문장으로. 수치 언급 절대 금지.",
-  "positive_contents": ["고객이 칭찬하는 구체적 이유와 맥락1", "고객이 칭찬하는 구체적 이유와 맥락2"],
-  "negative_contents": ["고객 불만의 구체적 맥락1", "반복 요청되는 개선 포인트2"]
+  "positive_contents": ["고객이 칭찬하는 단일 포인트1 (1문장)", "고객이 칭찬하는 단일 포인트2 (1문장)"],
+  "negative_contents": ["고객 불만의 단일 포인트1 (1문장)", "반복 요청되는 개선 단일 포인트2 (1문장)"],
+  "neutral_contents": ["중립적 관찰 또는 개선 제안 단일 포인트 (1문장)"]
 }}"""
 
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash",
-                system_instruction=system_instruction,
-            )
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
                     temperature=0.7,
-                    max_output_tokens=600,
+                    max_output_tokens=800,
                     response_mime_type="application/json",
                 ),
             )
@@ -188,4 +192,5 @@ positive_contents 와 negative_contents 는 빈 리스트 값이 될 수 있습�
             "summary": summary,
             "positive_contents": pos_contents,
             "negative_contents": neg_contents,
+            "neutral_contents": [],
         }

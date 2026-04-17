@@ -3,3 +3,7 @@ gunicorn
 whitenoise
 python-dotenv
 google-generativeai>=0.7.0
+celery[redis]>=5.3
+django-celery-beat>=2.6
+django-celery-results>=2.5
+redis>=5.0

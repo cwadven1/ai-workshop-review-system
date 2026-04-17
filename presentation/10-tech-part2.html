@@ -89,6 +89,8 @@
     font-weight: 700;
   }
   .table-header.green { background: #00B894; }
+  .table-header.orange { background: #FF9100; }
+  .table-header.red { background: #FA0050; }
   table { width: 100%; border-collapse: collapse; }
   th { background: #f8f8f8; font-size: 0.72rem; color: #888; font-weight: 600; padding: 10px 16px; text-align: left; }
   td { font-size: 0.78rem; color: #555; padding: 11px 16px; border-bottom: 1px solid #f5f5f5; line-height: 1.5; }
@@ -196,7 +198,7 @@
     <div class="part-badge">PART 2 · 기술 구현</div>
     <div class="logo">어디가좋은데?</div>
     <h1>주차별 요약 <span>AI 생성</span></h1>
-    <p>주차 통계 수집 → GPT-4o-mini 프롬프트 → ShopWeekReview.summary + ShopWeekSentimentReveiw(sentiment별) 저장</p>
+    <p>주차 통계 수집 → Gemini 프롬프트 → ShopWeekReview.summary + ShopWeekReviewSentiment(sentiment별) 저장</p>
   </div>
 
   <!-- AI 저장 대상 -->
@@ -208,7 +210,7 @@
       <p>해당 주차 전체 리뷰를 종합한 AI 요약문.<br>평점·분위기·주요 반응을 3–4문장으로 서술.</p>
     </div>
     <div class="save-box green">
-      <div class="model-name green">stores_shopweekreviewinfo</div>
+      <div class="model-name green">stores_shopweekreviewsentiment</div>
       <div class="field-label">sentiment + content</div>
       <p>감성(positive / negative) 별로 각 1건씩 저장.<br><code>sentiment</code> enum으로 구분, <code>content</code>에 해당 감성 패턴 분석 텍스트.</p>
     </div>
@@ -250,15 +252,15 @@
       <h3>summary / content 저장 (이력 누적)</h3>
       <p>
         <code>ShopWeekReview.update_or_create → summary</code> 저장<br>
-        <code>ShopWeekSentimentReveiw.create(sentiment="positive")</code> — 긍정 분석 텍스트<br>
-        <code>ShopWeekSentimentReveiw.create(sentiment="negative")</code> — 부정 분석 텍스트<br>
+        <code>ShopWeekReviewSentiment.create(sentiment="positive")</code> — 긍정 분석 텍스트<br>
+        <code>ShopWeekReviewSentiment.create(sentiment="negative")</code> — 부정 분석 텍스트<br>
         재계산 시 신규 레코드 추가, 이전 이력은 자동 보존.
       </p>
     </div>
   </div>
 
   <!-- 프롬프트 -->
-  <h2 class="section-title">GPT 프롬프트 템플릿</h2>
+  <h2 class="section-title">Gemini 프롬프트 템플릿</h2>
   <div class="prompt-wrap">
     <div class="prompt-header">
       <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
@@ -364,7 +366,7 @@ positive_contents 와 negative_contents 는 빈 리스트 값이 될 수 있습�
           <td><span class="badge badge-ai">AI</span></td>
           <td class="field-name">summary</td>
           <td class="field-type">TextField</td>
-          <td>GPT 생성 — 이번 주 전체 리뷰 종합 요약 (3–4문장) ★</td>
+          <td>Gemini 생성 — 이번 주 전체 리뷰 종합 요약 (3–4문장) ★</td>
         </tr>
         <tr>
           <td></td>
@@ -382,10 +384,10 @@ positive_contents 와 negative_contents 는 빈 리스트 값이 될 수 있습�
     </table>
   </div>
 
-  <!-- ShopWeekSentimentReveiw 모델 -->
-  <h2 class="section-title"><span>ShopWeekSentimentReveiw</span> — AI 저장 필드</h2>
+  <!-- ShopWeekReviewSentiment 모델 -->
+  <h2 class="section-title"><span>ShopWeekReviewSentiment</span> — AI 저장 필드</h2>
   <div class="table-wrap">
-    <div class="table-header green">🗂 stores_shopweekreviewinfo</div>
+    <div class="table-header green">🗂 stores_shopweekreviewsentiment</div>
     <table>
       <thead>
         <tr>
@@ -418,7 +420,7 @@ positive_contents 와 negative_contents 는 빈 리스트 값이 될 수 있습�
           <td><span class="badge badge-ai">AI</span></td>
           <td class="field-name">content</td>
           <td class="field-type">TextField</td>
-          <td>GPT 생성 — 해당 sentiment 리뷰 패턴 분석 텍스트 ★</td>
+          <td>Gemini 생성 — 해당 sentiment 리뷰 패턴 분석 텍스트 ★</td>
         </tr>
         <tr>
           <td></td>
@@ -431,6 +433,138 @@ positive_contents 와 negative_contents 는 빈 리스트 값이 될 수 있습�
           <td class="field-name">updated_at</td>
           <td class="field-type">DateTimeField</td>
           <td>auto_now</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ShopRecentReview 모델 -->
+  <h2 class="section-title"><span>ShopRecentReview</span> — 최근 리뷰 집계</h2>
+  <div class="table-wrap">
+    <div class="table-header orange">🗂 stores_shoprecentreview</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px">타입</th>
+          <th style="width:210px">필드명</th>
+          <th style="width:140px">타입</th>
+          <th>설명</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-pk">PK</span></td>
+          <td class="field-name">id</td>
+          <td class="field-type">AutoField</td>
+          <td>기본키</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-fk">FK</span></td>
+          <td class="field-name">shop</td>
+          <td class="field-type">ForeignKey</td>
+          <td>Store 참조 · index(shop, created_at)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">review_sample_start_date</td>
+          <td class="field-type">DateField</td>
+          <td>리뷰 샘플링 시작일</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">review_sample_end_date</td>
+          <td class="field-type">DateField</td>
+          <td>리뷰 샘플링 종료일</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">total_count</td>
+          <td class="field-type">IntegerField</td>
+          <td>샘플링 기간 총 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">positive_count</td>
+          <td class="field-type">IntegerField</td>
+          <td>긍정 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">negative_count</td>
+          <td class="field-type">IntegerField</td>
+          <td>부정 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">neutral_count</td>
+          <td class="field-type">IntegerField</td>
+          <td>중립 리뷰 수</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">average</td>
+          <td class="field-type">FloatField</td>
+          <td>샘플링 기간 평균 별점</td>
+        </tr>
+        <tr class="tr-ai">
+          <td><span class="badge badge-ai">AI</span></td>
+          <td class="field-name">summary</td>
+          <td class="field-type">TextField</td>
+          <td>Gemini 생성 — 최근 리뷰 전체 종합 요약 ★</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">created_at</td>
+          <td class="field-type">DateTimeField</td>
+          <td>auto_now_add</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ShopRecentReviewSentiment 모델 -->
+  <h2 class="section-title"><span>ShopRecentReviewSentiment</span> — 최근 감성 분석</h2>
+  <div class="table-wrap">
+    <div class="table-header red">🗂 stores_shoprecentreviewsentiment</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px">타입</th>
+          <th style="width:210px">필드명</th>
+          <th style="width:140px">타입</th>
+          <th>설명</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-pk">PK</span></td>
+          <td class="field-name">id</td>
+          <td class="field-type">AutoField</td>
+          <td>기본키</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-fk">FK</span></td>
+          <td class="field-name">shop_recent_review</td>
+          <td class="field-type">ForeignKey</td>
+          <td>ShopRecentReview 참조 (on_delete=CASCADE)</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">sentiment</td>
+          <td class="field-type">CharField</td>
+          <td>감성 구분 — <code>positive</code> / <code>negative</code> / <code>neutral</code> (enum)</td>
+        </tr>
+        <tr class="tr-ai">
+          <td><span class="badge badge-ai">AI</span></td>
+          <td class="field-name">content</td>
+          <td class="field-type">TextField</td>
+          <td>Gemini 생성 — 해당 sentiment 리뷰 패턴 분석 텍스트 ★</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="field-name">created_at</td>
+          <td class="field-type">DateTimeField</td>
+          <td>auto_now_add — ShopRecentReview와 매칭해 버전 식별</td>
         </tr>
       </tbody>
     </table>

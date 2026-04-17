@@ -1331,6 +1331,28 @@ main {
   color: #b91c1c;
 }
 
+.sentiment-point-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.sentiment-point-item:last-child {
+  margin-bottom: 0;
+}
+
+.sentiment-point-dot {
+  color: #16a34a;
+  font-size: 14px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.sentiment-point-item .sentiment-card-body {
+  margin: 0;
+}
+
 .sentiment-card-body {
   font-size: 13px;
   line-height: 1.55;

@@ -1,0 +1,1157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ store.name }} 사장님 대시보드 - 요기요{% endblock %}
+
+{% block content %}
+
+<!-- 사장님 대시보드 헤더 -->
+<div style="background: linear-gradient(135deg, #ff4757 0%, #c0392b 100%); padding: 16px; color: white;">
+    <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{% url 'store-timeline' store.pk %}" style="color:white; text-decoration:none;">
+            <i class="bi bi-arrow-left" style="font-size:18px;"></i>
+        </a>
+        <span style="font-size:13px; opacity:0.85; background:rgba(255,255,255,0.15); border-radius:20px; padding:2px 10px;">🏪 사장님 모드</span>
+    </div>
+    <div style="font-size:19px; font-weight:800; margin-top:4px;">{{ store.name }}</div>
+    <div style="font-size:13px; opacity:0.85; margin-top:2px;">운영 현황 & AI 개선 인사이트</div>
+</div>
+
+<!-- 핵심 지표 카드 4개 -->
+{% if recent_analysis %}
+<div style="padding: 16px; background: #fff;">
+    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:12px;">
+        <i class="bi bi-speedometer2 me-1" style="color:#ff4757;"></i>핵심 지표
+        <span style="font-size:11px; font-weight:400; color:#aaa; margin-left:4px;">{{ recent_analysis.period }}</span>
+    </div>
+    <div class="row g-2">
+        <div class="col-6">
+            <div style="background:#fff3f3; border-radius:12px; padding:14px; text-align:center; border:1px solid #ffd6d6;">
+                <div style="font-size:26px; font-weight:800; color:#ff4757; line-height:1.1;">{{ recent_analysis.avg_rating }}</div>
+                <div style="font-size:11px; color:#888; margin-top:2px;">평균 평점</div>
+                {% if recent_analysis.trend == 'up' %}
+                <div style="font-size:11px; color:#22c55e; font-weight:700; margin-top:3px;">▲ 상승 중</div>
+                {% elif recent_analysis.trend == 'down' %}
+                <div style="font-size:11px; color:#ef4444; font-weight:700; margin-top:3px;">▼ 하락 중</div>
+                {% else %}
+                <div style="font-size:11px; color:#9ca3af; font-weight:700; margin-top:3px;">→ 유지</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-6">
+            <div style="background:#f0fdf4; border-radius:12px; padding:14px; text-align:center; border:1px solid #bbf7d0;">
+                <div style="font-size:26px; font-weight:800; color:#16a34a; line-height:1.1;">{{ recent_analysis.total_reviews }}</div>
+                <div style="font-size:11px; color:#888; margin-top:2px;">총 리뷰 수</div>
+                <div style="font-size:11px; color:#16a34a; font-weight:700; margin-top:3px;">최근 4주</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div style="background:#f0f9ff; border-radius:12px; padding:14px; text-align:center; border:1px solid #bae6fd;">
+                <div style="font-size:26px; font-weight:800; color:#0284c7; line-height:1.1;">{{ recent_analysis.pos_pct }}%</div>
+                <div style="font-size:11px; color:#888; margin-top:2px;">긍정 비율</div>
+                <div style="font-size:11px; color:#0284c7; font-weight:700; margin-top:3px;">😊 긍정 리뷰</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div style="background:#fff7ed; border-radius:12px; padding:14px; text-align:center; border:1px solid #fed7aa;">
+                <div style="font-size:26px; font-weight:800; color:#ea580c; line-height:1.1;">{{ recent_analysis.neg_pct }}%</div>
+                <div style="font-size:11px; color:#888; margin-top:2px;">부정 비율</div>
+                <div style="font-size:11px; color:#ea580c; font-weight:700; margin-top:3px;">😞 부정 리뷰</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 강점 인사이트 -->
+<div id="strengthSection" style="padding: 16px; background: #f0fdf4; border-top: 4px solid #22c55e;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div style="font-size:13px; font-weight:700; color:#222;">
+            <i class="bi bi-stars me-1" style="color:#16a34a;"></i>강점 인사이트
+            <span style="font-size:11px; font-weight:400; color:#6b7280; margin-left:4px;">잘하고 있는 것들</span>
+        </div>
+        <button onclick="openStrengthDrawer()" style="background:#f9fafb; color:#6b7280; border:1px solid #e5e7eb; border-radius:16px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">
+            확인된 강점
+            <span id="strengthBadge" style="display:none; background:#22c55e; color:white; border-radius:10px; padding:0 6px; margin-left:4px; font-size:11px;"></span>
+        </button>
+    </div>
+
+    {% if ai_strength_items %}
+    <!-- DB 기반 AI 강점 -->
+    <div id="strengthList">
+        {% for item in ai_strength_items %}
+        <div id="strength-{{ item.pk }}" style="background:white; border-radius:12px; padding:14px; margin-bottom:10px;
+             border-left:4px solid #22c55e;
+             box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: opacity 0.3s;">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <span style="font-size:14px; font-weight:700; color:#222;">{{ item.title }}</span>
+                <small style="color:#bbb; font-size:11px; white-space:nowrap; margin-left:8px; flex-shrink:0;">W{{ item.week_number }}</small>
+            </div>
+            <p style="font-size:13px; color:#555; margin-bottom:8px; line-height:1.5;">{{ item.description }}</p>
+            {% if item.action_detail %}
+            <div style="background:#f0fdf4; border-radius:8px; padding:8px 10px; font-size:12px; color:#166534; font-weight:600; margin-bottom:10px; line-height:1.5;">
+                <i class="bi bi-arrow-up-circle me-1" style="color:#22c55e;"></i>{{ item.action_detail|linebreaksbr }}
+            </div>
+            {% endif %}
+            <div class="d-flex gap-2 flex-wrap">
+                {% if item.link_url %}
+                <a href="{{ item.link_url }}" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; text-decoration:none;">
+                    {{ item.link_label|default:"긍정 리뷰 보기" }} →
+                </a>
+                {% endif %}
+                <button onclick="confirmStrength({{ item.pk }})" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+                    ✓ 확인됨
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div id="strengthLoadMore" style="display:none; text-align:center; margin-top:4px;">
+        <button onclick="loadMoreStrength()" style="background:white; color:#16a34a; border:1px solid #86efac; border-radius:20px; padding:7px 20px; font-size:12px; font-weight:700; cursor:pointer; width:100%;">
+            더보기 <span id="strengthRemaining" style="font-weight:400;"></span>
+        </button>
+    </div>
+
+    {% elif strength_items %}
+    <!-- 폴백: 규칙 기반 (AI 분석 전) -->
+    <div style="background:#f0fdf4; border-radius:10px; padding:10px 14px; margin-bottom:12px; border:1px solid #bbf7d0; font-size:12px; color:#166534;">
+        <i class="bi bi-info-circle me-1"></i>AI 분석 전 규칙 기반 강점을 표시합니다. AI 분석을 실행하면 더 정확한 강점 인사이트를 확인할 수 있습니다.
+    </div>
+    {% for item in strength_items %}
+    <div style="background:white; border-radius:12px; padding:14px; margin-bottom:10px;
+         border-left:4px solid #22c55e;
+         box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-{{ item.icon }}" style="font-size:16px; color:#16a34a;"></i>
+            <span style="font-size:14px; font-weight:700; color:#222;">{{ item.title }}</span>
+        </div>
+        <p style="font-size:13px; color:#555; margin-bottom:0; line-height:1.5;">{{ item.desc }}</p>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <!-- 빈 상태 -->
+    <div style="text-align:center; color:#aaa; font-size:14px; padding:24px 0;">
+        <i class="bi bi-stars d-block mb-2" style="font-size:28px; color:#d1d5db;"></i>
+        아직 AI 강점 분석 결과가 없습니다.<br>
+        <span style="font-size:12px;">AI 분석을 실행하면 강점 인사이트를 확인할 수 있습니다.</span>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- AI 개선 할일 목록 -->
+<div id="actionSection" style="padding: 16px; background: #f8f9fa; border-top: 4px solid #ff4757;">
+
+    <!-- 헤더 + 분석 트리거 버튼 -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div style="font-size:13px; font-weight:700; color:#222;">
+            <i class="bi bi-robot me-1" style="color:#ff4757;"></i>AI 개선 할일 목록
+            {% if ai_action_items %}
+            <span style="background:#ff4757; color:white; border-radius:20px; padding:1px 8px; font-size:11px; margin-left:5px; font-weight:700;">{{ ai_action_items|length }}</span>
+            {% endif %}
+        </div>
+        {% if analysis_running %}
+        <button disabled style="background:#f3f4f6; color:#9ca3af; border:none; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:600; cursor:not-allowed;">
+            <span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;border-width:2px;"></span>분석 중...
+        </button>
+        {% else %}
+        <button id="triggerBtn" onclick="triggerAnalysis()" style="background:#ff4757; color:white; border:none; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">
+            <i class="bi bi-arrow-repeat me-1"></i>AI 분석 실행
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- DB 기반 AI 할일 목록 -->
+    {% if ai_action_items %}
+    {% if action_items_rule_based %}
+    <div style="background:#fff7ed; border-radius:10px; padding:10px 14px; margin-bottom:12px; border:1px solid #fed7aa; font-size:12px; color:#92400e;">
+        <i class="bi bi-info-circle me-1"></i>아직 AI 분석 결과가 없습니다. 규칙 기반 추천을 표시합니다. 위 <b>[AI 분석 실행]</b> 버튼으로 AI 분석을 실행해보세요.
+    </div>
+    {% endif %}
+
+    <!-- 처리 내역 보기 버튼 -->
+    <div style="text-align:right; margin-bottom:8px;">
+        <button onclick="openHistoryDrawer()" style="background:#f9fafb; color:#6b7280; border:1px solid #e5e7eb; border-radius:16px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">
+            처리 내역
+            <span id="historyBadge" style="display:none; background:#ff4757; color:white; border-radius:10px; padding:0 6px; margin-left:4px; font-size:11px;"></span>
+        </button>
+    </div>
+
+    <!-- 레벨 탭 필터 -->
+    <div id="levelTabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+        <button id="tab-all" onclick="filterByLevel('all')"
+            style="background:#ff4757; color:white; border:none; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:700; cursor:pointer; transition:all 0.15s;">
+            전체 <span id="cnt-all" style="background:rgba(255,255,255,0.25); border-radius:10px; padding:0 5px; margin-left:2px;"></span>
+        </button>
+        <button id="tab-danger" onclick="filterByLevel('danger')"
+            style="background:#f3f4f6; color:#6b7280; border:none; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;">
+            🔴 위험 <span id="cnt-danger" style="background:rgba(0,0,0,0.08); border-radius:10px; padding:0 5px; margin-left:2px;"></span>
+        </button>
+        <button id="tab-warning" onclick="filterByLevel('warning')"
+            style="background:#f3f4f6; color:#6b7280; border:none; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;">
+            🟡 주의 <span id="cnt-warning" style="background:rgba(0,0,0,0.08); border-radius:10px; padding:0 5px; margin-left:2px;"></span>
+        </button>
+        <button id="tab-info" onclick="filterByLevel('info')"
+            style="background:#f3f4f6; color:#6b7280; border:none; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;">
+            🔵 정보 <span id="cnt-info" style="background:rgba(0,0,0,0.08); border-radius:10px; padding:0 5px; margin-left:2px;"></span>
+        </button>
+        <button id="tab-success" onclick="filterByLevel('success')"
+            style="background:#f3f4f6; color:#6b7280; border:none; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;">
+            ✅ 완료 <span id="cnt-success" style="background:rgba(0,0,0,0.08); border-radius:10px; padding:0 5px; margin-left:2px;"></span>
+        </button>
+    </div>
+
+    <div id="actionList">
+        {% for item in ai_action_items %}
+        <div id="action-{{ item.pk }}" data-level="{{ item.level }}" data-desc="{{ item.description|escapejs }}" data-action-detail="{{ item.action_detail|escapejs }}" data-priority="{{ item.priority }}" style="background:white; border-radius:12px; padding:14px; margin-bottom:10px;
+             border-left:4px solid {% if item.level == 'danger' %}#ef4444{% elif item.level == 'warning' %}#f59e0b{% elif item.level == 'success' %}#22c55e{% else %}#3b82f6{% endif %};
+             box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: opacity 0.3s;">
+            <!-- 제목 행 -->
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span style="font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px;
+                        {% if item.priority == 'high' %}background:#fee2e2; color:#dc2626;{% elif item.priority == 'medium' %}background:#fef3c7; color:#d97706;{% else %}background:#f3f4f6; color:#6b7280;{% endif %}">
+                        {% if item.priority == 'high' %}🔴 긴급{% elif item.priority == 'medium' %}🟡 보통{% else %}⚪ 낮음{% endif %}
+                    </span>
+                    <span style="font-size:14px; font-weight:700; color:#222;">{{ item.title }}</span>
+                </div>
+                <small style="color:#bbb; font-size:11px; white-space:nowrap; margin-left:8px; flex-shrink:0;">W{{ item.week_number }}</small>
+            </div>
+            <!-- 설명 -->
+            <p style="font-size:13px; color:#555; margin-bottom:8px; line-height:1.5;">{{ item.description }}</p>
+            <!-- 구체적 조치 -->
+            <div style="background:#f8f9fa; border-radius:8px; padding:8px 10px; font-size:12px; color:#444; font-weight:600; margin-bottom:10px; line-height:1.5;">
+                <i class="bi bi-arrow-right-circle me-1" style="color:#ff4757;"></i>{{ item.action_detail|linebreaksbr }}
+            </div>
+            <!-- 액션 버튼 -->
+            <div class="d-flex gap-2 flex-wrap">
+                {% if item.link_url %}
+                <a href="{{ item.link_url }}" style="background:#fff3f3; color:#ff4757; border:1px solid #fecaca; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; text-decoration:none;">
+                    {{ item.link_label|default:"리뷰 보기" }} →
+                </a>
+                {% endif %}
+                <button onclick="showCompleteModal({{ item.pk }})" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+                    ✓ 완료
+                </button>
+                <button onclick="if(confirm('기각 하시겠습니까?')) updateAction({{ item.pk }}, 'dismissed', '', '{{ item.title|escapejs }}')" style="background:#f9fafb; color:#9ca3af; border:1px solid #e5e7eb; border-radius:16px; padding:4px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+                    기각
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div id="actionLoadMore" style="display:none; text-align:center; margin-top:4px;">
+        <button onclick="loadMoreAction()" style="background:white; color:#ff4757; border:1px solid #fca5a5; border-radius:20px; padding:7px 20px; font-size:12px; font-weight:700; cursor:pointer; width:100%;">
+            더보기 <span id="actionRemaining" style="font-weight:400;"></span>
+        </button>
+    </div>
+
+    {% elif action_items %}
+    <!-- 폴백: 규칙 기반 (AI 분석 전) -->
+    <div style="background:#fff7ed; border-radius:10px; padding:10px 14px; margin-bottom:12px; border:1px solid #fed7aa; font-size:12px; color:#92400e;">
+        <i class="bi bi-info-circle me-1"></i>아직 AI 분석 결과가 없습니다. 규칙 기반 추천을 표시합니다. 위 버튼으로 AI 분석을 실행해보세요.
+    </div>
+    {% for action in action_items %}
+    <div style="background:white; border-radius:12px; padding:14px; margin-bottom:10px;
+         border-left:4px solid {% if action.level == 'danger' %}#ef4444{% elif action.level == 'warning' %}#f59e0b{% elif action.level == 'success' %}#22c55e{% elif action.level == 'info' %}#3b82f6{% else %}#9ca3af{% endif %};
+         box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-{{ action.icon }}" style="font-size:16px; color:{% if action.level == 'danger' %}#ef4444{% elif action.level == 'warning' %}#f59e0b{% elif action.level == 'success' %}#22c55e{% elif action.level == 'info' %}#3b82f6{% else %}#9ca3af{% endif %};"></i>
+            <span style="font-size:14px; font-weight:700; color:#222;">{{ action.title }}</span>
+        </div>
+        <p style="font-size:13px; color:#555; margin-bottom:8px; line-height:1.5;">{{ action.desc }}</p>
+        <div style="background:#f8f9fa; border-radius:8px; padding:8px 10px; font-size:12px; color:#444; font-weight:600;">
+            <i class="bi bi-arrow-right-circle me-1" style="color:#ff4757;"></i>{{ action.action }}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <!-- 빈 상태 -->
+    <div style="text-align:center; color:#aaa; font-size:14px; padding:32px 0;">
+        <i class="bi bi-robot d-block mb-2" style="font-size:32px; color:#d1d5db;"></i>
+        아직 AI 분석 결과가 없습니다.<br>
+        <span style="font-size:12px;">위 버튼을 눌러 분석을 시작해보세요.</span>
+    </div>
+    {% endif %}
+
+
+</div>
+
+<!-- 처리 내역 드로어 -->
+<style>
+#historyOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+#historyOverlay.open {
+    opacity: 1; pointer-events: auto;
+}
+#historyDrawer {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 430px;
+    background: white; border-radius: 20px 20px 0 0;
+    z-index: 1001;
+    height: 70vh;
+    display: flex; flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+}
+#historyDrawer.open {
+    transform: translateX(-50%) translateY(0);
+}
+#historyDetailPanel {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: white;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    z-index: 5;
+    display: flex; flex-direction: column;
+}
+#historyDetailPanel.open {
+    transform: translateX(0);
+}
+</style>
+<div id="historyOverlay" onclick="closeHistoryDrawer()"></div>
+<div id="historyDrawer">
+    <!-- 핸들 -->
+    <div style="text-align:center; padding:10px 0 0;">
+        <div style="width:36px; height:4px; background:#e5e7eb; border-radius:2px; display:inline-block;"></div>
+    </div>
+    <!-- 헤더 -->
+    <div style="padding:12px 16px 10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f3f4f6;">
+        <span style="font-size:15px; font-weight:700; color:#222;">처리 내역</span>
+        <button onclick="closeHistoryDrawer()" style="background:none; border:none; font-size:22px; color:#9ca3af; cursor:pointer; line-height:1; padding:0 4px;">×</button>
+    </div>
+    <!-- 탭 -->
+    <div style="display:flex; border-bottom:1px solid #e5e7eb;">
+        <button id="histTabCompleted" onclick="switchHistoryTab('completed')"
+            style="flex:1; padding:10px 0; background:none; border:none; border-bottom:2px solid #16a34a; font-size:13px; font-weight:700; color:#16a34a; cursor:pointer; transition:all 0.15s;">
+            ✅ 완료 <span id="histCntCompleted" style="font-size:12px; font-weight:400;"></span>
+        </button>
+        <button id="histTabDismissed" onclick="switchHistoryTab('dismissed')"
+            style="flex:1; padding:10px 0; background:none; border:none; border-bottom:2px solid transparent; font-size:13px; font-weight:600; color:#9ca3af; cursor:pointer; transition:all 0.15s;">
+            🚫 기각 <span id="histCntDismissed" style="font-size:12px; font-weight:400;"></span>
+        </button>
+    </div>
+    <!-- 내용 -->
+    <div style="overflow-y:auto; flex:1; padding:12px 14px;">
+        <!-- 완료 목록 -->
+        <div id="historyCompletedList">
+            {% for item in completed_action_items %}
+            <div class="hist-item-completed" onclick="openHistoryDetail('completed','{{ item.title|escapejs }}','{{ item.description|escapejs }}','{{ item.action_detail|escapejs }}','{{ item.level }}','{{ item.priority }}','{{ item.completed_note|escapejs }}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; border-radius:10px; background:white; margin-bottom:6px; border:1px solid #e5e7eb;">
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                        <i class="bi bi-check-circle-fill" style="color:#22c55e; font-size:13px; flex-shrink:0;"></i>
+                        <span style="font-size:13px; font-weight:600; color:#222; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ item.title }}</span>
+                    </div>
+                    {% if item.completed_note %}
+                    <p style="font-size:12px; color:#9ca3af; margin:0 0 0 19px; line-height:1.4;">{{ item.completed_note }}</p>
+                    {% endif %}
+                </div>
+                <small style="color:#d1d5db; font-size:11px; white-space:nowrap; margin-left:10px; flex-shrink:0;">{{ item.completed_at|date:"m/d" }}</small>
+            </div>
+            {% empty %}
+            <div id="histCompletedEmpty" style="text-align:center; color:#aaa; font-size:13px; padding:32px 0;">
+                <i class="bi bi-check2-all d-block mb-2" style="font-size:28px; color:#d1d5db;"></i>완료 처리한 항목이 없습니다.
+            </div>
+            {% endfor %}
+        </div>
+        <!-- 기각 목록 -->
+        <div id="historyDismissedList" style="display:none;">
+            {% for item in dismissed_action_items %}
+            <div class="hist-item-dismissed" onclick="openHistoryDetail('dismissed','{{ item.title|escapejs }}','{{ item.description|escapejs }}','{{ item.action_detail|escapejs }}','{{ item.level }}','{{ item.priority }}','')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; border-radius:10px; background:white; margin-bottom:6px; border:1px solid #e5e7eb;">
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <i class="bi bi-x-circle" style="color:#9ca3af; font-size:13px; flex-shrink:0;"></i>
+                        <span style="font-size:13px; font-weight:600; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ item.title }}</span>
+                    </div>
+                </div>
+                <small style="color:#d1d5db; font-size:11px; white-space:nowrap; margin-left:10px; flex-shrink:0;">{{ item.updated_at|date:"m/d" }}</small>
+            </div>
+            {% empty %}
+            <div id="histDismissedEmpty" style="text-align:center; color:#aaa; font-size:13px; padding:32px 0;">
+                <i class="bi bi-slash-circle d-block mb-2" style="font-size:28px; color:#d1d5db;"></i>기각한 항목이 없습니다.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- 상세 패널 -->
+    <div id="historyDetailPanel">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px 10px; border-bottom:1px solid #f3f4f6; flex-shrink:0; background:white;">
+            <button onclick="closeHistoryDetail()" style="background:none; border:none; padding:4px 8px 4px 0; cursor:pointer; color:#6b7280; font-size:15px; font-weight:700; display:flex; align-items:center; gap:4px;">
+                <i class="bi bi-chevron-left"></i>뒤로
+            </button>
+            <span style="font-size:15px; font-weight:700; color:#222;">상세 보기</span>
+        </div>
+        <div id="historyDetailContent" style="overflow-y:auto; flex:1; padding:16px;"></div>
+    </div>
+</div>
+
+<!-- 확인된 강점 드로어 -->
+<style>
+#strengthOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+#strengthOverlay.open {
+    opacity: 1; pointer-events: auto;
+}
+#strengthDrawer {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 430px;
+    background: white; border-radius: 20px 20px 0 0;
+    z-index: 1001;
+    height: 70vh;
+    display: flex; flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+}
+#strengthDrawer.open {
+    transform: translateX(-50%) translateY(0);
+}
+#strengthDetailPanel {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: white;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    z-index: 5;
+    display: flex; flex-direction: column;
+}
+#strengthDetailPanel.open {
+    transform: translateX(0);
+}
+</style>
+<div id="strengthOverlay" onclick="closeStrengthDrawer()"></div>
+<div id="strengthDrawer">
+    <div style="text-align:center; padding:10px 0 0;">
+        <div style="width:36px; height:4px; background:#e5e7eb; border-radius:2px; display:inline-block;"></div>
+    </div>
+    <div style="padding:12px 16px 10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f3f4f6;">
+        <span style="font-size:15px; font-weight:700; color:#222;"><i class="bi bi-check-circle-fill me-1" style="color:#22c55e;"></i>확인된 강점</span>
+        <button onclick="closeStrengthDrawer()" style="background:none; border:none; font-size:22px; color:#9ca3af; cursor:pointer; line-height:1; padding:0 4px;">×</button>
+    </div>
+    <div style="overflow-y:auto; flex:1; padding:12px 14px;">
+        <div id="strengthDrawerList">
+            {% for item in confirmed_strength_items %}
+            <div class="strength-drawer-item" onclick="openStrengthDetail('{{ item.title|escapejs }}','{{ item.description|escapejs }}','{{ item.action_detail|escapejs }}','W{{ item.week_number }}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; border-radius:10px; background:white; margin-bottom:6px; border:1px solid #e5e7eb;">
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <i class="bi bi-stars" style="color:#22c55e; font-size:13px; flex-shrink:0;"></i>
+                        <span style="font-size:13px; font-weight:600; color:#222; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ item.title }}</span>
+                    </div>
+                    {% if item.description %}
+                    <p style="font-size:12px; color:#9ca3af; margin:2px 0 0 19px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ item.description }}</p>
+                    {% endif %}
+                </div>
+                <small style="color:#d1d5db; font-size:11px; white-space:nowrap; margin-left:10px; flex-shrink:0;">W{{ item.week_number }}</small>
+            </div>
+            {% empty %}
+            <div id="strengthDrawerEmpty" style="text-align:center; color:#aaa; font-size:13px; padding:32px 0;">
+                <i class="bi bi-stars d-block mb-2" style="font-size:28px; color:#d1d5db;"></i>아직 확인된 강점이 없습니다.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div id="strengthDetailPanel">
+        <div style="display:flex; align-items:center; gap:8px; padding:12px 16px 10px; border-bottom:1px solid #f3f4f6; flex-shrink:0; background:white;">
+            <button onclick="closeStrengthDetail()" style="background:none; border:none; padding:4px 8px 4px 0; cursor:pointer; color:#6b7280; font-size:15px; font-weight:700; display:flex; align-items:center; gap:4px;">
+                <i class="bi bi-chevron-left"></i>뒤로
+            </button>
+            <span style="font-size:15px; font-weight:700; color:#222;">강점 상세</span>
+        </div>
+        <div id="strengthDetailContent" style="overflow-y:auto; flex:1; padding:16px;"></div>
+    </div>
+</div>
+
+<!-- 평점 트렌드 차트 -->
+<div style="padding: 16px; background: white; border-top: 1px solid #eee;">
+    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:12px;">
+        <i class="bi bi-graph-up me-1" style="color:#ff4757;"></i>주별 평점 트렌드
+    </div>
+    <div style="position:relative; height:200px;">
+        <canvas id="ownerTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- 주차별 현황 테이블 -->
+{% if weekly_data %}
+<div style="padding: 16px; background: #f8f9fa; border-top: 1px solid #eee;">
+    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:12px;">
+        <i class="bi bi-table me-1" style="color:#ff4757;"></i>주차별 현황
+    </div>
+    <div style="overflow-x:auto; border-radius:10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+        <table style="width:100%; border-collapse:collapse; font-size:12px; background:white;">
+            <thead>
+                <tr style="background:#fff5f5; border-bottom:2px solid #ffd6d6;">
+                    <th style="padding:9px 8px; text-align:center; color:#ff4757; font-weight:700;">주차</th>
+                    <th style="padding:9px 8px; text-align:center; color:#555;">평점</th>
+                    <th style="padding:9px 8px; text-align:center; color:#555;">리뷰</th>
+                    <th style="padding:9px 8px; text-align:center; color:#22c55e;">긍정</th>
+                    <th style="padding:9px 8px; text-align:center; color:#ef4444;">부정</th>
+                    <th style="padding:9px 8px; text-align:center; color:#555;">변화</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in weekly_data %}
+                {% with summary=item.summary %}
+                <tr style="border-bottom:1px solid #f0f0f0; {% if forloop.first %}background:#fff9f9;{% endif %}">
+                    <td style="padding:9px 8px; text-align:center; font-weight:700; color:#ff4757;">W{{ summary.week_number }}</td>
+                    <td style="padding:9px 8px; text-align:center; font-weight:700; color:#222;">{{ summary.average }}</td>
+                    <td style="padding:9px 8px; text-align:center; color:#555;">{{ summary.count }}</td>
+                    <td style="padding:9px 8px; text-align:center; color:#22c55e; font-weight:600;">{{ summary.positive_count }}</td>
+                    <td style="padding:9px 8px; text-align:center; color:#ef4444; font-weight:600;">{{ summary.negative_count }}</td>
+                    <td style="padding:9px 8px; text-align:center;">
+                        {% if item.has_diff %}
+                            {% if item.diff > 0 %}
+                            <span style="color:#22c55e; font-weight:700;">▲+{{ item.diff }}</span>
+                            {% elif item.diff < 0 %}
+                            <span style="color:#ef4444; font-weight:700;">▼{{ item.diff }}</span>
+                            {% else %}
+                            <span style="color:#9ca3af;">—</span>
+                            {% endif %}
+                        {% else %}
+                        <span style="color:#ddd;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- 긍정 리뷰 반복 키워드 -->
+{% if pos_keywords %}
+<div style="padding: 16px; background: white; border-top: 1px solid #eee;">
+    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:10px;">
+        <i class="bi bi-hand-thumbs-up-fill me-1" style="color:#16a34a;"></i>긍정 리뷰 반복 키워드
+        <span style="font-size:11px; font-weight:400; color:#aaa; margin-left:4px;">고객이 칭찬하는 항목</span>
+    </div>
+    <div>
+        {% for kw in pos_keywords %}
+        <span style="display:inline-block; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:20px; padding:5px 13px; font-size:12px; font-weight:600; margin:3px 2px;">
+            {{ kw.keyword }} <span style="opacity:0.65;">({{ kw.count }})</span>
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 부정 리뷰 반복 키워드 -->
+{% if neg_keywords %}
+<div style="padding: 16px; background: white; border-top: 1px solid #eee;">
+    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:10px;">
+        <i class="bi bi-exclamation-circle me-1" style="color:#ef4444;"></i>부정 리뷰 반복 키워드
+        <span style="font-size:11px; font-weight:400; color:#aaa; margin-left:4px;">집중 개선 필요</span>
+    </div>
+    <div>
+        {% for kw in neg_keywords %}
+        <span style="display:inline-block; background:#fff0f0; color:#ef4444; border:1px solid #fecaca; border-radius:20px; padding:5px 13px; font-size:12px; font-weight:600; margin:3px 2px;">
+            {{ kw.keyword }} <span style="opacity:0.65;">({{ kw.count }})</span>
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 최근 긍정 리뷰 목록 -->
+<div id="posSection" style="padding: 16px; background: #f0fdf4; border-top: 1px solid #eee;">
+    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:12px;">
+        <i class="bi bi-hand-thumbs-up me-1" style="color:#16a34a;"></i>최근 긍정 리뷰
+    </div>
+    {% for review in recent_positive_reviews %}
+    <div style="background:white; border-radius:10px; padding:12px; margin-bottom:8px; border-left:3px solid #22c55e; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <div style="color:#16a34a;">
+                {% for i in "12345" %}
+                    {% if forloop.counter <= review.rating %}
+                    <i class="bi bi-star-fill" style="font-size:11px;"></i>
+                    {% else %}
+                    <i class="bi bi-star" style="font-size:11px;"></i>
+                    {% endif %}
+                {% endfor %}
+                <span style="font-size:12px; font-weight:700; margin-left:4px;">{{ review.rating }}점</span>
+            </div>
+            <small style="color:#bbb; font-size:11px;">{{ review.review_date }} · {{ review.week }}주차</small>
+        </div>
+        <p style="font-size:13px; color:#444; margin-bottom:6px; line-height:1.5;">{{ review.content }}</p>
+        {% if review.keywords %}
+        <div>
+            {% for kw in review.keywords %}
+            <span style="display:inline-block; background:#f0fdf4; color:#16a34a; border-radius:12px; padding:2px 8px; font-size:11px; margin:1px;">{{ kw }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div style="text-align:center; color:#aaa; font-size:14px; padding:32px 0;">
+        <i class="bi bi-emoji-neutral d-block mb-2" style="font-size:30px; color:#9ca3af;"></i>
+        아직 긍정 리뷰 데이터가 없습니다.
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 최근 부정 리뷰 목록 -->
+<div id="negSection" style="padding: 16px; background: #f8f9fa; border-top: 1px solid #eee; padding-bottom: 80px;">
+    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:12px;">
+        <i class="bi bi-hand-thumbs-down me-1" style="color:#ef4444;"></i>최근 부정 리뷰
+    </div>
+    {% for review in recent_negative_reviews %}
+    <div style="background:white; border-radius:10px; padding:12px; margin-bottom:8px; border-left:3px solid #ef4444; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <div style="color:#ef4444;">
+                {% for i in "12345" %}
+                    {% if forloop.counter <= review.rating %}
+                    <i class="bi bi-star-fill" style="font-size:11px;"></i>
+                    {% else %}
+                    <i class="bi bi-star" style="font-size:11px;"></i>
+                    {% endif %}
+                {% endfor %}
+                <span style="font-size:12px; font-weight:700; margin-left:4px;">{{ review.rating }}점</span>
+            </div>
+            <small style="color:#bbb; font-size:11px;">{{ review.review_date }} · {{ review.week }}주차</small>
+        </div>
+        <p style="font-size:13px; color:#444; margin-bottom:6px; line-height:1.5;">{{ review.content }}</p>
+        {% if review.keywords %}
+        <div>
+            {% for kw in review.keywords %}
+            <span style="display:inline-block; background:#fff0f0; color:#ef4444; border-radius:12px; padding:2px 8px; font-size:11px; margin:1px;">{{ kw }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div style="text-align:center; color:#aaa; font-size:14px; padding:32px 0;">
+        <i class="bi bi-emoji-smile d-block mb-2" style="font-size:30px; color:#22c55e;"></i>
+        최근 부정 리뷰가 없습니다 🎉
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── CSRF 헬퍼 ──────────────────────────────────────────────
+function getCsrf() {
+    return document.cookie.split('; ')
+        .find(r => r.startsWith('csrftoken='))
+        ?.split('=')[1] || '';
+}
+
+// ── 토스트 메시지 ──────────────────────────────────────────
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+        background:${type === 'success' ? '#16a34a' : type === 'warning' ? '#d97706' : '#ef4444'};
+        color:white; padding:10px 18px; border-radius:20px; font-size:13px;
+        z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.2); white-space:nowrap;`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.4s'; }, 2600);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ── 수동 분석 트리거 ───────────────────────────────────────
+function triggerAnalysis() {
+    const btn = document.getElementById('triggerBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;border-width:2px;"></span>분석 요청 중...';
+
+    fetch('/stores/{{ store.pk }}/owner/trigger-analysis/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            if (data.sync) {
+                // 동기 실행 완료 → 즉시 새로고침
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>분석 완료! 새로고침 중...';
+                btn.style.background = '#16a34a';
+                showToast('AI 분석이 완료되었습니다. 페이지를 새로고침합니다.', 'success');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>요청 완료';
+                btn.style.background = '#16a34a';
+                showToast('AI 분석이 시작되었습니다. 완료 후 새로고침하면 결과가 나타납니다.', 'success');
+            }
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>AI 분석 실행';
+            showToast(data.error || '오류가 발생했습니다.', 'error');
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>AI 분석 실행';
+        showToast('네트워크 오류가 발생했습니다.', 'error');
+    });
+}
+
+// ── 액션 아이템 상태 변경 ──────────────────────────────────
+function updateAction(itemId, status, note, titleText) {
+    fetch(`/action-items/${itemId}/update/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrf(),
+        },
+        body: JSON.stringify({ status, note: note || '' }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.ok) { showToast('저장 실패: ' + (data.error || ''), 'error'); return; }
+        const el = document.getElementById(`action-${itemId}`);
+        if (!el) return;
+        if (status === 'completed' || status === 'dismissed') {
+            const title = titleText || el.querySelector('[style*="font-size:14px"]')?.textContent?.trim() || '';
+            const desc = el.dataset.desc || '';
+            const actionDetail = el.dataset.actionDetail || '';
+            const priority = el.dataset.priority || '';
+            const level = el.dataset.level || '';
+            el.style.opacity = '0';
+            setTimeout(() => {
+                el.remove();
+                const list = document.getElementById('actionList');
+                const remaining = list ? list.querySelectorAll('[data-level]').length : 0;
+                if (list && remaining === 0) {
+                    list.innerHTML = '<div style="text-align:center; color:#aaa; font-size:13px; padding:24px 0;"><i class="bi bi-check-circle-fill d-block mb-2" style="font-size:28px; color:#22c55e;"></i>모든 항목을 처리했습니다!</div>';
+                    const btn = document.getElementById('actionLoadMore');
+                    if (btn) btn.style.display = 'none';
+                } else {
+                    applyActionPagination();
+                    updateLevelCounts();
+                }
+                addToHistoryDrawer(status, title, note || '', desc, actionDetail, priority, level);
+            }, 300);
+            const msg = status === 'completed' ? '완료 처리했습니다.' : '기각했습니다.';
+            showToast(msg, 'success');
+        }
+    })
+    .catch(() => showToast('네트워크 오류가 발생했습니다.', 'error'));
+}
+
+// ── 완료 모달 (메모 입력) ──────────────────────────────────
+function showCompleteModal(itemId) {
+    const el = document.getElementById(`action-${itemId}`);
+    const title = el?.querySelector('[style*="font-size:14px"]')?.textContent?.trim() || '';
+    const note = prompt('완료 메모를 입력하세요 (선택사항):');
+    if (note === null) return;  // 취소
+    updateAction(itemId, 'completed', note, title);
+}
+
+// ── 강점 인사이트 확인됨 처리 ──────────────────────────────
+function confirmStrength(itemId) {
+    fetch(`/action-items/${itemId}/update/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrf(),
+        },
+        body: JSON.stringify({ status: 'confirmed' }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.ok) { showToast('저장 실패: ' + (data.error || ''), 'error'); return; }
+        const el = document.getElementById(`strength-${itemId}`);
+        if (!el) return;
+        // 확인된 강점 목록에 동적 추가
+        const title = el.querySelector('[style*="font-size:14px"]')?.textContent?.trim() || '';
+        const desc = el.querySelector('p')?.textContent?.trim() || '';
+        const actionBox = el.querySelector('[style*="background:#f0fdf4"]');
+        const actionText = actionBox ? actionBox.textContent?.trim() : '';
+        const week = el.querySelector('small')?.textContent?.trim() || '';
+        addToConfirmedStrength(title, desc, actionText, week);
+        el.style.opacity = '0';
+        setTimeout(() => {
+            el.remove();
+            const list = document.getElementById('strengthList');
+            if (list && list.querySelectorAll('[id^="strength-"]').length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:#6b7280; font-size:13px; padding:20px 0;"><i class="bi bi-check-circle-fill d-block mb-2" style="font-size:24px; color:#22c55e;"></i>모든 강점을 확인했습니다!</div>';
+                const btn = document.getElementById('strengthLoadMore');
+                if (btn) btn.style.display = 'none';
+            } else {
+                updateStrengthLoadMore();
+            }
+        }, 300);
+        showToast('강점을 확인했습니다.', 'success');
+    })
+    .catch(() => showToast('네트워크 오류가 발생했습니다.', 'error'));
+}
+
+// ── 확인된 강점 드로어 ────────────────────────────────────
+function openStrengthDrawer() {
+    const drawer = document.getElementById('strengthDrawer');
+    const overlay = document.getElementById('strengthOverlay');
+    if (!drawer) return;
+    document.body.style.overflow = 'hidden';
+    overlay.classList.add('open');
+    requestAnimationFrame(() => drawer.classList.add('open'));
+}
+
+function closeStrengthDrawer() {
+    const drawer = document.getElementById('strengthDrawer');
+    const overlay = document.getElementById('strengthOverlay');
+    closeStrengthDetail();
+    if (drawer) drawer.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function openStrengthDetail(title, desc, actionDetail, week) {
+    const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    document.getElementById('strengthDetailContent').innerHTML = `
+        <div style="border-left:4px solid #22c55e; padding-left:12px; margin-bottom:20px;">
+            <div style="font-size:11px; color:#16a34a; font-weight:600; margin-bottom:6px;">${esc(week)}</div>
+            <div style="font-size:16px; font-weight:800; color:#222; line-height:1.4;">${esc(title)}</div>
+        </div>
+        ${desc ? `<div style="margin-bottom:16px;"><div style="font-size:11px; font-weight:700; color:#aaa; margin-bottom:6px; letter-spacing:0.5px;">설명</div><p style="font-size:14px; color:#444; line-height:1.6; margin:0;">${esc(desc)}</p></div>` : ''}
+        ${actionDetail ? `<div style="background:#f0fdf4; border-radius:10px; padding:12px 14px; border:1px solid #bbf7d0;"><div style="font-size:11px; font-weight:700; color:#16a34a; margin-bottom:6px;">유지 방법</div><p style="font-size:14px; color:#166534; line-height:1.6; margin:0;"><i class="bi bi-arrow-up-circle me-1" style="color:#22c55e;"></i>${esc(actionDetail)}</p></div>` : ''}
+    `;
+    document.getElementById('strengthDetailPanel').classList.add('open');
+}
+
+function closeStrengthDetail() {
+    document.getElementById('strengthDetailPanel')?.classList.remove('open');
+}
+
+function addToConfirmedStrength(title, desc, actionText, week) {
+    const list = document.getElementById('strengthDrawerList');
+    if (!list) return;
+    const empty = document.getElementById('strengthDrawerEmpty');
+    if (empty) empty.remove();
+    const card = document.createElement('div');
+    card.className = 'strength-drawer-item';
+    card.style.cssText = 'cursor:pointer; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; border-radius:10px; background:white; margin-bottom:6px; border:1px solid #e5e7eb;';
+    card.innerHTML = `<div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:6px;"><i class="bi bi-stars" style="color:#22c55e; font-size:13px; flex-shrink:0;"></i><span style="font-size:13px; font-weight:600; color:#222; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</span></div>${desc ? `<p style="font-size:12px; color:#9ca3af; margin:2px 0 0 19px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${desc}</p>` : ''}</div><small style="color:#d1d5db; font-size:11px; white-space:nowrap; margin-left:10px; flex-shrink:0;">${week}</small>`;
+    card.onclick = () => openStrengthDetail(title, desc, actionText, week);
+    list.prepend(card);
+    updateStrengthBadge();
+}
+
+function updateStrengthBadge() {
+    const cnt = document.querySelectorAll('.strength-drawer-item').length;
+    const badge = document.getElementById('strengthBadge');
+    if (!badge) return;
+    if (cnt > 0) {
+        badge.textContent = cnt;
+        badge.style.display = 'inline';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// ── 페이지네이션 ──────────────────────────────────────────
+const PAGE_SIZE = 5;
+let _strengthShown = PAGE_SIZE;
+let _actionShown = PAGE_SIZE;
+
+function initStrengthPagination() {
+    const items = document.querySelectorAll('#strengthList > [id^="strength-"]');
+    if (items.length <= PAGE_SIZE) return;
+    items.forEach((el, i) => { el.style.display = i < PAGE_SIZE ? '' : 'none'; });
+    updateStrengthLoadMore(items);
+}
+
+function updateStrengthLoadMore(items) {
+    if (!items) items = document.querySelectorAll('#strengthList > [id^="strength-"]');
+    const remaining = [...items].filter(el => el.style.display === 'none').length;
+    const btn = document.getElementById('strengthLoadMore');
+    if (!btn) return;
+    btn.style.display = remaining > 0 ? '' : 'none';
+    const sp = document.getElementById('strengthRemaining');
+    if (sp) sp.textContent = remaining > 0 ? `(${remaining}개 더 있음)` : '';
+}
+
+function loadMoreStrength() {
+    const items = document.querySelectorAll('#strengthList > [id^="strength-"]');
+    let toShow = 0;
+    items.forEach(el => {
+        if (el.style.display === 'none' && toShow < PAGE_SIZE) {
+            el.style.display = '';
+            toShow++;
+        }
+    });
+    updateStrengthLoadMore(items);
+}
+
+function applyActionPagination() {
+    const allItems = document.querySelectorAll('#actionList [data-level]');
+    const filtered = [...allItems].filter(el =>
+        _currentLevel === 'all' || el.dataset.level === _currentLevel
+    );
+    allItems.forEach(el => { el.style.display = 'none'; });
+    filtered.forEach((el, i) => { el.style.display = i < _actionShown ? '' : 'none'; });
+    const remaining = Math.max(0, filtered.length - _actionShown);
+    const btn = document.getElementById('actionLoadMore');
+    if (!btn) return;
+    btn.style.display = remaining > 0 ? '' : 'none';
+    const sp = document.getElementById('actionRemaining');
+    if (sp) sp.textContent = remaining > 0 ? `(${remaining}개 더 있음)` : '';
+}
+
+function loadMoreAction() {
+    _actionShown += PAGE_SIZE;
+    applyActionPagination();
+    updateLevelCounts();
+}
+
+// ── 레벨 탭 필터 ──────────────────────────────────────────
+const LEVEL_STYLES = {
+    all:     { bg: '#ff4757', color: 'white', cntBg: 'rgba(255,255,255,0.25)' },
+    danger:  { bg: '#fee2e2', color: '#dc2626', cntBg: 'rgba(220,38,38,0.15)' },
+    warning: { bg: '#fef3c7', color: '#d97706', cntBg: 'rgba(217,119,6,0.15)' },
+    info:    { bg: '#dbeafe', color: '#1d4ed8', cntBg: 'rgba(29,78,216,0.12)' },
+    success: { bg: '#dcfce7', color: '#16a34a', cntBg: 'rgba(22,163,74,0.12)' },
+};
+let _currentLevel = 'all';
+
+function filterByLevel(level) {
+    _currentLevel = level;
+    _actionShown = PAGE_SIZE;
+    applyActionPagination();
+    // 탭 스타일 갱신
+    Object.keys(LEVEL_STYLES).forEach(lv => {
+        const btn = document.getElementById('tab-' + lv);
+        if (!btn) return;
+        const s = LEVEL_STYLES[lv];
+        if (lv === level) {
+            btn.style.background = s.bg;
+            btn.style.color = s.color;
+            btn.style.fontWeight = '700';
+            const cnt = btn.querySelector('span');
+            if (cnt) cnt.style.background = s.cntBg;
+        } else {
+            btn.style.background = '#f3f4f6';
+            btn.style.color = '#6b7280';
+            btn.style.fontWeight = '600';
+            const cnt = btn.querySelector('span');
+            if (cnt) cnt.style.background = 'rgba(0,0,0,0.08)';
+        }
+    });
+}
+
+function updateLevelCounts() {
+    const items = document.querySelectorAll('#actionList [data-level]');
+    const counts = { all: 0, danger: 0, warning: 0, info: 0, success: 0 };
+    items.forEach(el => {
+        counts.all++;
+        if (counts[el.dataset.level] !== undefined) counts[el.dataset.level]++;
+    });
+    Object.keys(counts).forEach(lv => {
+        const span = document.getElementById('cnt-' + lv);
+        if (span) span.textContent = counts[lv] > 0 ? counts[lv] : '';
+        const btn = document.getElementById('tab-' + lv);
+        if (btn && lv !== 'all') btn.style.display = counts[lv] > 0 ? '' : 'none';
+    });
+}
+
+// 페이지 로드 시 페이지네이션 + 카운트 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('strengthList')) initStrengthPagination();
+    if (document.getElementById('actionList')) {
+        applyActionPagination();
+        updateLevelCounts();
+    }
+    updateHistoryBadge();
+    updateHistoryTabCounts();
+    updateStrengthBadge();
+});
+
+// ── 처리 내역 드로어 ──────────────────────────────────────
+let _histTab = 'completed';
+
+function openHistoryDrawer() {
+    const drawer = document.getElementById('historyDrawer');
+    const overlay = document.getElementById('historyOverlay');
+    if (!drawer) return;
+    document.body.style.overflow = 'hidden';
+    overlay.classList.add('open');
+    requestAnimationFrame(() => drawer.classList.add('open'));
+    switchHistoryTab(_histTab);
+}
+
+function closeHistoryDrawer() {
+    const drawer = document.getElementById('historyDrawer');
+    const overlay = document.getElementById('historyOverlay');
+    closeHistoryDetail();
+    if (drawer) drawer.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+function openHistoryDetail(status, title, desc, actionDetail, priority, level, note) {
+    const pLabel = priority === 'high' ? '🔴 긴급' : priority === 'medium' ? '🟡 보통' : '⚪ 낮음';
+    const pStyle = priority === 'high' ? 'background:#fee2e2; color:#dc2626'
+                 : priority === 'medium' ? 'background:#fef3c7; color:#d97706'
+                 : 'background:#f3f4f6; color:#6b7280';
+    const borderC = level === 'danger' ? '#ef4444' : level === 'warning' ? '#f59e0b' : level === 'success' ? '#22c55e' : '#3b82f6';
+    const statusBadge = status === 'completed'
+        ? '<span style="font-size:12px; color:#16a34a; font-weight:600;">✅ 완료됨</span>'
+        : '<span style="font-size:12px; color:#6b7280; font-weight:600;">🚫 기각됨</span>';
+    const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+    document.getElementById('historyDetailContent').innerHTML = `
+        <div style="border-left:4px solid ${borderC}; padding-left:12px; margin-bottom:20px;">
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                ${priority ? `<span style="font-size:11px; font-weight:700; border-radius:10px; padding:2px 8px; ${pStyle};">${pLabel}</span>` : ''}
+                ${statusBadge}
+            </div>
+            <div style="font-size:16px; font-weight:800; color:#222; line-height:1.4;">${esc(title)}</div>
+        </div>
+        ${desc ? `<div style="margin-bottom:16px;"><div style="font-size:11px; font-weight:700; color:#aaa; margin-bottom:6px; letter-spacing:0.5px;">설명</div><p style="font-size:14px; color:#444; line-height:1.6; margin:0;">${esc(desc)}</p></div>` : ''}
+        ${actionDetail ? `<div style="background:#fff7ed; border-radius:10px; padding:12px 14px; margin-bottom:16px; border:1px solid #fed7aa;"><div style="font-size:11px; font-weight:700; color:#d97706; margin-bottom:6px;">구체적 조치</div><p style="font-size:14px; color:#444; line-height:1.6; margin:0;"><i class="bi bi-arrow-right-circle me-1" style="color:#ff4757;"></i>${esc(actionDetail)}</p></div>` : ''}
+        ${note ? `<div style="background:#f0fdf4; border-radius:10px; padding:12px 14px; border:1px solid #bbf7d0;"><div style="font-size:11px; font-weight:700; color:#16a34a; margin-bottom:6px;">완료 메모</div><p style="font-size:13px; color:#166534; margin:0; line-height:1.5;">${esc(note)}</p></div>` : ''}
+    `;
+    document.getElementById('historyDetailPanel').classList.add('open');
+}
+
+function closeHistoryDetail() {
+    document.getElementById('historyDetailPanel')?.classList.remove('open');
+}
+
+function switchHistoryTab(tab) {
+    _histTab = tab;
+    const completedList = document.getElementById('historyCompletedList');
+    const dismissedList = document.getElementById('historyDismissedList');
+    const tabC = document.getElementById('histTabCompleted');
+    const tabD = document.getElementById('histTabDismissed');
+    if (!completedList || !dismissedList) return;
+    if (tab === 'completed') {
+        completedList.style.display = '';
+        dismissedList.style.display = 'none';
+        tabC.style.borderBottomColor = '#16a34a';
+        tabC.style.color = '#16a34a';
+        tabC.style.fontWeight = '700';
+        tabD.style.borderBottomColor = 'transparent';
+        tabD.style.color = '#9ca3af';
+        tabD.style.fontWeight = '600';
+    } else {
+        completedList.style.display = 'none';
+        dismissedList.style.display = '';
+        tabD.style.borderBottomColor = '#6b7280';
+        tabD.style.color = '#374151';
+        tabD.style.fontWeight = '700';
+        tabC.style.borderBottomColor = 'transparent';
+        tabC.style.color = '#9ca3af';
+        tabC.style.fontWeight = '600';
+    }
+}
+
+function addToHistoryDrawer(status, title, note, desc, actionDetail, priority, level) {
+    const today = new Date();
+    const dateStr = (today.getMonth() + 1).toString().padStart(2, '0') + '/' + today.getDate().toString().padStart(2, '0');
+    if (status === 'completed') {
+        const list = document.getElementById('historyCompletedList');
+        if (!list) return;
+        const empty = document.getElementById('histCompletedEmpty');
+        if (empty) empty.remove();
+        const card = document.createElement('div');
+        card.className = 'hist-item-completed';
+        card.style.cssText = 'cursor:pointer; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; border-radius:10px; background:white; margin-bottom:6px; border:1px solid #e5e7eb;';
+        card.innerHTML = `<div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:6px; margin-bottom:${note ? '2px' : '0'};"><i class="bi bi-check-circle-fill" style="color:#22c55e; font-size:13px; flex-shrink:0;"></i><span style="font-size:13px; font-weight:600; color:#222; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</span></div>${note ? `<p style="font-size:12px; color:#9ca3af; margin:0 0 0 19px; line-height:1.4;">${note}</p>` : ''}</div><small style="color:#d1d5db; font-size:11px; white-space:nowrap; margin-left:10px; flex-shrink:0;">${dateStr}</small>`;
+        card.onclick = () => openHistoryDetail('completed', title, desc||'', actionDetail||'', priority||'', level||'', note||'');
+        list.insertBefore(card, list.firstChild);
+    } else {
+        const list = document.getElementById('historyDismissedList');
+        if (!list) return;
+        const empty = document.getElementById('histDismissedEmpty');
+        if (empty) empty.remove();
+        const card = document.createElement('div');
+        card.className = 'hist-item-dismissed';
+        card.style.cssText = 'cursor:pointer; display:flex; justify-content:space-between; align-items:flex-start; padding:10px 12px; border-radius:10px; background:white; margin-bottom:6px; border:1px solid #e5e7eb;';
+        card.innerHTML = `<div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:6px;"><i class="bi bi-x-circle" style="color:#9ca3af; font-size:13px; flex-shrink:0;"></i><span style="font-size:13px; font-weight:600; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${title}</span></div></div><small style="color:#d1d5db; font-size:11px; white-space:nowrap; margin-left:10px; flex-shrink:0;">${dateStr}</small>`;
+        card.onclick = () => openHistoryDetail('dismissed', title, desc||'', actionDetail||'', priority||'', level||'', '');
+        list.insertBefore(card, list.firstChild);
+    }
+    updateHistoryBadge();
+    updateHistoryTabCounts();
+}
+
+function updateHistoryBadge() {
+    const cCnt = document.querySelectorAll('.hist-item-completed').length;
+    const dCnt = document.querySelectorAll('.hist-item-dismissed').length;
+    const total = cCnt + dCnt;
+    const badge = document.getElementById('historyBadge');
+    if (!badge) return;
+    if (total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function updateHistoryTabCounts() {
+    const cCnt = document.querySelectorAll('.hist-item-completed').length;
+    const dCnt = document.querySelectorAll('.hist-item-dismissed').length;
+    const cSpan = document.getElementById('histCntCompleted');
+    const dSpan = document.getElementById('histCntDismissed');
+    if (cSpan) cSpan.textContent = cCnt > 0 ? `(${cCnt})` : '';
+    if (dSpan) dSpan.textContent = dCnt > 0 ? `(${dCnt})` : '';
+}
+
+// ── 평점 트렌드 차트 ───────────────────────────────────────
+(function() {
+    const raw = {{ chart_data_json|safe }};
+    if (!raw || raw.length === 0) return;
+
+    const ctx = document.getElementById('ownerTrendChart').getContext('2d');
+    const labels = raw.map(d => 'W' + d.label);
+    const scores = raw.map(d => d.score);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '평점',
+                data: scores,
+                borderColor: '#ff4757',
+                backgroundColor: 'rgba(255,71,87,0.08)',
+                borderWidth: 2.5,
+                pointBackgroundColor: scores.map((s, i) => {
+                    if (i === 0) return '#ff4757';
+                    return s >= scores[i-1] ? '#22c55e' : '#ef4444';
+                }),
+                pointRadius: 5,
+                tension: 0.3,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return '평점: ' + ctx.parsed.y + '점';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 1, max: 5,
+                    ticks: { stepSize: 1, font: { size: 11 }, color: '#888' },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    ticks: { font: { size: 11 }, color: '#888' },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

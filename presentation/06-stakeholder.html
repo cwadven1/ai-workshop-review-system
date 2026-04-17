@@ -222,8 +222,8 @@
         <div class="flow-step">
           <div class="step-num">3</div>
           <div>
-            <div class="step-title">조치 실행</div>
-            <div class="step-desc">데이터에 기반한 구체적 개선 실행</div>
+            <div class="step-title">AI 액션 추천</div>
+            <div class="step-desc">패턴 감지 → 원인 진단 → 구체적 조치 자동 제안</div>
           </div>
         </div>
         <div class="flow-connector"><div class="flow-connector-line"></div></div>
@@ -261,8 +261,39 @@
             <tr><td>별점 트렌드 차트</td><td>매출 그래프처럼 직관적. 평점 변화를 1초에 파악</td></tr>
             <tr><td>전주 비교</td><td>개선 조치 후 효과를 숫자로 확인</td></tr>
             <tr><td>AI 요약 리포트</td><td>100개 리뷰를 3줄로 요약. 핵심 즉시 파악</td></tr>
+            <tr><td>AI 개선 액션 추천</td><td>"배달 3주 악화 → 주방 운영 점검" 패턴별 구체적 조치 자동 제안</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사장님 대시보드 -->
+  <div class="feat-section anim-section from-below" id="sec-dashboard">
+    <h2>사장님 전용 대시보드</h2>
+    <div style="max-width:1020px;margin:0 auto;background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border-top:4px solid #6C5CE7;">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:0.75rem;font-weight:700;color:#6C5CE7;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">주별 트렌드</div>
+          <div style="background:#FDFCFF;border-radius:12px;padding:16px;font-size:0.85rem;color:#555;line-height:1.7;">
+            별점 변화 그래프 + 전주 대비 수치<br>
+            <span style="color:#6C5CE7;font-weight:600;">한눈에 가게 상태 파악</span>
+          </div>
+        </div>
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:0.75rem;font-weight:700;color:#0984E3;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">AI 진단 리포트</div>
+          <div style="background:#EBF5FF;border-radius:12px;padding:16px;font-size:0.85rem;color:#555;line-height:1.7;">
+            카테고리별 문제 분석<br>
+            <span style="color:#0984E3;font-weight:600;">원인 파악 → 구체적 액션 추천</span>
+          </div>
+        </div>
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:0.75rem;font-weight:700;color:#00B894;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">개선 효과 측정</div>
+          <div style="background:#F0FFF9;border-radius:12px;padding:16px;font-size:0.85rem;color:#555;line-height:1.7;">
+            조치 전·후 지표 비교<br>
+            <span style="color:#00B894;font-weight:600;">데이터로 개선 효과 확인</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -321,6 +352,7 @@
       <div class="step-dot"></div>
       <div class="step-dot"></div>
       <div class="step-dot"></div>
+      <div class="step-dot"></div>
     </div>
     <button id="next-btn">다음 &rarr;</button>
   </div>
@@ -332,6 +364,7 @@
       document.getElementById('sec-consumer'),
       document.getElementById('sec-owner'),
       document.getElementById('sec-feat'),
+      document.getElementById('sec-dashboard'),
       document.getElementById('sec-compare'),
       document.getElementById('sec-summary')
     ];

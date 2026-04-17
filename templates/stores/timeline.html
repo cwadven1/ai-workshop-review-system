@@ -11,6 +11,9 @@
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="timeline-title">{{ store.name }}</span>
+    <a href="{% url 'owner-dashboard' store.pk %}" style="margin-left:auto; font-size:12px; font-weight:700; color:#ff4757; background:#fff0f0; border:1px solid #ffd6d6; border-radius:20px; padding:5px 12px; text-decoration:none; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+        <i class="bi bi-speedometer2"></i> 사장님 대시보드
+    </a>
 </div>
 
 <!-- ── 최근 리뷰 분석 ── -->
@@ -56,10 +59,10 @@
     </div>
 
     <!-- 최근 AI 요약 -->
-    {% if recent_analysis.period_summary %}
+    {% if srr and srr.summary or recent_analysis.period_summary %}
     <div class="recent-ai-summary">
-        <span class="recent-ai-label">AI 요약 ({{ recent_analysis.period }})</span>
-        <p class="recent-ai-text">{{ recent_analysis.period_summary }}</p>
+        <span class="recent-ai-label">AI 요약</span>
+        <p class="recent-ai-text">{% if srr and srr.summary %}{{ srr.summary }}{% else %}{{ recent_analysis.period_summary }}{% endif %}</p>
     </div>
     {% endif %}
 
@@ -70,26 +73,26 @@
         <div class="sentiment-analysis-card sentiment-card-pos">
             <div class="sentiment-card-header">
                 <i class="bi bi-hand-thumbs-up-fill me-1"></i>긍정 리뷰 분석
-                {% if srr %}<span class="sentiment-card-count">{{ srr.positive_count }}건</span>{% endif %}
             </div>
-            <p class="sentiment-card-body">{{ recent_sentiments.positive }}</p>
+            {% for point in recent_sentiments.positive %}
+            <div class="sentiment-point-item">
+                <span class="sentiment-point-dot">•</span>
+                <p class="sentiment-card-body">{{ point }}</p>
+            </div>
+            {% endfor %}
         </div>
         {% endif %}
         {% if recent_sentiments.negative and srr.negative_count > 0 %}
         <div class="sentiment-analysis-card sentiment-card-neg mt-2">
             <div class="sentiment-card-header">
                 <i class="bi bi-hand-thumbs-down-fill me-1"></i>부정 리뷰 분석
-                <span class="sentiment-card-count">{{ srr.negative_count }}건</span>
             </div>
-            <p class="sentiment-card-body">{{ recent_sentiments.negative }}</p>
-        </div>
-        {% endif %}
-        {% if recent_sentiments.neutral %}
-        <div class="sentiment-analysis-card sentiment-card-neu mt-2">
-            <div class="sentiment-card-header">
-                <i class="bi bi-dash-circle me-1"></i>종합
+            {% for point in recent_sentiments.negative %}
+            <div class="sentiment-point-item">
+                <span class="sentiment-point-dot">•</span>
+                <p class="sentiment-card-body">{{ point }}</p>
             </div>
-            <p class="sentiment-card-body">{{ recent_sentiments.neutral }}</p>
+            {% endfor %}
         </div>
         {% endif %}
     </div>
@@ -169,7 +172,7 @@
 
 <div class="accordion" id="weeklyAccordion" style="border-radius:0;">
     {% for item in weekly_data %}
-    {% with summary=item.summary reviews=item.reviews %}
+    {% with summary=item.summary reviews=item.reviews sentiment_points=item.sentiment_points %}
     <div class="accordion-item">
         <h2 class="accordion-header">
             <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
@@ -241,6 +244,54 @@
                             {% for kw in summary.top_keywords %}
                             <a href="?q={{ kw.keyword }}" class="keyword-chip">{{ kw.keyword }} ({{ kw.count }})</a>
                             {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- AI 감정 포인트 -->
+                        {% if sentiment_points.positive or sentiment_points.negative or sentiment_points.neutral %}
+                        <div class="mt-2 pt-2" style="border-top:1px solid var(--yg-border);">
+                            <h6 style="font-size:13px;font-weight:700;margin-bottom:8px;">
+                                <i class="bi bi-chat-square-text me-1"></i>AI 분석 포인트
+                            </h6>
+                            {% if sentiment_points.positive %}
+                            <div class="sentiment-analysis-card sentiment-card-pos mb-2">
+                                <div class="sentiment-card-header">
+                                    <i class="bi bi-emoji-smile me-1"></i>긍정 포인트
+                                </div>
+                                {% for point in sentiment_points.positive %}
+                                <div class="sentiment-point-item">
+                                    <span class="sentiment-point-dot">•</span>
+                                    <p class="sentiment-card-body">{{ point }}</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if sentiment_points.negative %}
+                            <div class="sentiment-analysis-card sentiment-card-neg mb-2">
+                                <div class="sentiment-card-header">
+                                    <i class="bi bi-emoji-frown me-1"></i>부정 포인트
+                                </div>
+                                {% for point in sentiment_points.negative %}
+                                <div class="sentiment-point-item">
+                                    <span class="sentiment-point-dot">•</span>
+                                    <p class="sentiment-card-body">{{ point }}</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if sentiment_points.neutral %}
+                            <div class="sentiment-analysis-card sentiment-card-neu mb-2">
+                                <div class="sentiment-card-header">
+                                    <i class="bi bi-emoji-neutral me-1"></i>중립 포인트
+                                </div>
+                                {% for point in sentiment_points.neutral %}
+                                <div class="sentiment-point-item">
+                                    <span class="sentiment-point-dot">•</span>
+                                    <p class="sentiment-card-body">{{ point }}</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
