@@ -94,7 +94,7 @@ def _resolve_link_url(store, level):
     return ""
 
 
-def _run_analysis(job):
+def _run_analysis(job, item_type=None):
     from stores.models import AIActionItem, ShopWeekReview
 
     store = job.store
@@ -129,40 +129,45 @@ def _run_analysis(job):
     actions = data.get("actions", [])[:MAX_ACTION_ITEMS]
     strengths = data.get("strengths", [])[:MAX_STRENGTH_ITEMS]
 
-    for action in actions:
-        level = action.get("level", "info")
-        if level == "success":
-            level = "info"  # actions 섹션에는 success 사용 금지
-        AIActionItem.objects.create(
-            store=store,
-            source_job=job,
-            item_type="action",
-            title=action.get("title", "")[:200],
-            description=action.get("description", ""),
-            action_detail=action.get("action_detail", ""),
-            level=level,
-            priority=action.get("priority", "medium"),
-            link_label=action.get("link_label", ""),
-            link_url=_resolve_link_url(store, level),
-            week_year=week_year,
-            week_number=week_number,
-        )
+    save_actions = item_type in (None, "all", "action")
+    save_strengths = item_type in (None, "all", "strength")
 
-    for strength in strengths:
-        AIActionItem.objects.create(
-            store=store,
-            source_job=job,
-            item_type="strength",
-            title=strength.get("title", "")[:200],
-            description=strength.get("description", ""),
-            action_detail=strength.get("action_detail", ""),
-            level="success",
-            priority="low",
-            link_url=f"/stores/{store.pk}/reviews/?sentiment=positive",
-            link_label="긍정 리뷰 보기",
-            week_year=week_year,
-            week_number=week_number,
-        )
+    if save_actions:
+        for action in actions:
+            level = action.get("level", "info")
+            if level == "success":
+                level = "info"
+            AIActionItem.objects.create(
+                store=store,
+                source_job=job,
+                item_type="action",
+                title=action.get("title", "")[:200],
+                description=action.get("description", ""),
+                action_detail=action.get("action_detail", ""),
+                level=level,
+                priority=action.get("priority", "medium"),
+                link_label=action.get("link_label", ""),
+                link_url=_resolve_link_url(store, level),
+                week_year=week_year,
+                week_number=week_number,
+            )
+
+    if save_strengths:
+        for strength in strengths:
+            AIActionItem.objects.create(
+                store=store,
+                source_job=job,
+                item_type="strength",
+                title=strength.get("title", "")[:200],
+                description=strength.get("description", ""),
+                action_detail=strength.get("action_detail", ""),
+                level="success",
+                priority="low",
+                link_url=f"/stores/{store.pk}/reviews/?sentiment=positive",
+                link_label="긍정 리뷰 보기",
+                week_year=week_year,
+                week_number=week_number,
+            )
 
     job.source_week = source_week
     job.status = "completed"
@@ -171,7 +176,7 @@ def _run_analysis(job):
 
 
 @shared_task(bind=True, max_retries=2)
-def run_store_analysis(self, store_id, triggered_by="schedule"):
+def run_store_analysis(self, store_id, triggered_by="schedule", item_type="all"):
     """단일 가게 AI 분석 실행 (스케줄/수동 공용)"""
     from stores.models import AIAnalysisJob, Store
 
@@ -185,11 +190,12 @@ def run_store_analysis(self, store_id, triggered_by="schedule"):
         store=store,
         status="running",
         triggered_by=triggered_by,
+        job_type=item_type,
     )
 
     try:
-        _run_analysis(job)
-        logger.info(f"Analysis completed: store={store_id} job={job.pk}")
+        _run_analysis(job, item_type=item_type)
+        logger.info(f"Analysis completed: store={store_id} job={job.pk} type={item_type}")
     except Exception as exc:
         job.status = "failed"
         job.error_message = str(exc)

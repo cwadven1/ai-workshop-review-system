@@ -6,7 +6,7 @@ from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone as tz
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from reviews.models import Review
 
@@ -298,23 +298,6 @@ def _generate_strength_items(weekly_data, recent_analysis, pos_keywords):
             'desc': f'긍정 리뷰 비율 {pos_pct}%로 고객 만족도가 안정적입니다. 과반수 이상의 고객이 긍정적인 경험을 하고 있습니다.',
         })
 
-    # 규칙 2: 긍정 반복 키워드 top2
-    if pos_keywords and len(pos_keywords) >= 2:
-        kw1 = pos_keywords[0]['keyword']
-        kw2 = pos_keywords[1]['keyword']
-        strengths.append({
-            'icon': 'chat-heart-fill',
-            'title': f'고객이 자주 칭찬하는 키워드',
-            'desc': f'"{kw1}", "{kw2}"가 긍정 리뷰에서 반복 등장합니다. 이 항목들이 고객이 가장 만족하는 강점입니다.',
-        })
-    elif pos_keywords:
-        kw1 = pos_keywords[0]['keyword']
-        strengths.append({
-            'icon': 'chat-heart-fill',
-            'title': f'고객이 자주 칭찬하는 키워드',
-            'desc': f'"{kw1}"가 긍정 리뷰에서 반복 등장합니다. 이 항목이 고객이 가장 만족하는 강점입니다.',
-        })
-
     # 규칙 3: 평점 수준
     avg_r = recent_analysis.get('avg_rating', 0)
     if avg_r >= 4.3:
@@ -487,13 +470,16 @@ def owner_dashboard(request, store_id):
         .order_by("-updated_at")[:50]
     )
 
-    # 진행 중인 분석 작업 여부
-    analysis_running = AIAnalysisJob.objects.filter(store=store, status="running").exists()
+    # 진행 중인 분석 작업 여부 (유형별 독립 추적)
+    running_jobs = set(
+        AIAnalysisJob.objects.filter(store=store, status="running")
+        .values_list("job_type", flat=True)
+    )
+    analysis_running_action = bool(running_jobs & {"action", "all"})
+    analysis_running_strength = bool(running_jobs & {"strength", "all"})
 
     neg_keywords = _build_neg_keywords(weekly_data)
     pos_keywords = _build_pos_keywords(weekly_data)
-    strength_items = _generate_strength_items(weekly_data, recent_analysis, pos_keywords)
-
     recent_negative_reviews = list(
         Review.objects.filter(store=store, sentiment='negative')
         .order_by('-review_date')[:10]
@@ -525,10 +511,10 @@ def owner_dashboard(request, store_id):
         'action_items_rule_based': action_items_rule_based,  # rule-based 여부
         'completed_action_items': completed_action_items,
         'dismissed_action_items': dismissed_action_items,
-        'analysis_running': analysis_running,
-        'ai_strength_items': ai_strength_items,           # DB 기반 AI 강점 (open)
-        'confirmed_strength_items': confirmed_strength_items,  # 확인 완료된 강점
-        'strength_items': strength_items,                      # 규칙 기반 폴백
+        'analysis_running_action': analysis_running_action,
+        'analysis_running_strength': analysis_running_strength,
+        'ai_strength_items': ai_strength_items,
+        'confirmed_strength_items': confirmed_strength_items,
         'weekly_data': weekly_data,
         'neg_keywords': neg_keywords,
         'pos_keywords': pos_keywords,
@@ -545,22 +531,31 @@ def trigger_analysis(request, store_id):
 
     store = get_object_or_404(Store, pk=store_id)
 
-    # 이미 실행 중이면 중복 방지
-    if AIAnalysisJob.objects.filter(store=store, status="running").exists():
+    try:
+        body = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, ValueError):
+        body = {}
+    item_type = body.get("type", "all")
+    if item_type not in ("action", "strength", "all"):
+        item_type = "all"
+
+    # 동일 유형이 이미 실행 중이면 중복 방지
+    overlap_types = {"all", item_type}
+    if AIAnalysisJob.objects.filter(store=store, status="running", job_type__in=overlap_types).exists():
         return JsonResponse({"ok": False, "error": "이미 분석이 진행 중입니다."}, status=409)
 
     # Celery 비동기 시도 → 실패 시 동기 실행 폴백
     try:
         from stores.tasks import run_store_analysis
-        run_store_analysis.delay(store_id, triggered_by="manual")
+        run_store_analysis.delay(store_id, triggered_by="manual", item_type=item_type)
         return JsonResponse({"ok": True, "sync": False})
     except Exception:
         pass
 
     # 동기 폴백: Celery/Redis 없을 때
-    job = AIAnalysisJob.objects.create(store=store, status="running", triggered_by="manual")
+    job = AIAnalysisJob.objects.create(store=store, status="running", triggered_by="manual", job_type=item_type)
     try:
-        _run_analysis(job)
+        _run_analysis(job, item_type=item_type)
         return JsonResponse({"ok": True, "sync": True})
     except Exception as exc:
         job.status = "failed"
@@ -568,6 +563,19 @@ def trigger_analysis(request, store_id):
         job.completed_at = tz.now()
         job.save()
         return JsonResponse({"ok": False, "error": str(exc)}, status=500)
+
+
+def analysis_status(request, store_id):
+    """진행 중인 분석 상태 폴링 엔드포인트"""
+    store = get_object_or_404(Store, pk=store_id)
+    running_jobs = set(
+        AIAnalysisJob.objects.filter(store=store, status="running")
+        .values_list("job_type", flat=True)
+    )
+    return JsonResponse({
+        "action_running": bool(running_jobs & {"action", "all"}),
+        "strength_running": bool(running_jobs & {"strength", "all"}),
+    })
 
 
 @require_POST
@@ -684,3 +692,29 @@ def store_timeline(request, store_id):
         }
 
     return render(request, 'stores/timeline.html', context)
+
+
+@require_GET
+def owner_week_reviews(request, store_id, year, week):
+    store = get_object_or_404(Store, pk=store_id)
+    reviews = list(
+        Review.objects.filter(store=store, week=week)
+        .order_by('-review_date')
+        .values('rating', 'content', 'sentiment', 'review_date')
+    )
+    for r in reviews:
+        r['review_date'] = r['review_date'].isoformat()
+
+    try:
+        swr = ShopWeekReview.objects.get(shop=store, year=year, week_number=week)
+        summary = {
+            'count': swr.count,
+            'average': float(swr.average),
+            'positive_count': swr.positive_count,
+            'neutral_count': swr.neutral_count,
+            'negative_count': swr.negative_count,
+        }
+    except ShopWeekReview.DoesNotExist:
+        summary = None
+
+    return JsonResponse({'reviews': reviews, 'summary': summary})

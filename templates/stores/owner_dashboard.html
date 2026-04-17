@@ -70,10 +70,21 @@
             <i class="bi bi-stars me-1" style="color:#16a34a;"></i>강점 인사이트
             <span style="font-size:11px; font-weight:400; color:#6b7280; margin-left:4px;">잘하고 있는 것들</span>
         </div>
-        <button onclick="openStrengthDrawer()" style="background:#f9fafb; color:#6b7280; border:1px solid #e5e7eb; border-radius:16px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">
-            확인된 강점
-            <span id="strengthBadge" style="display:none; background:#22c55e; color:white; border-radius:10px; padding:0 6px; margin-left:4px; font-size:11px;"></span>
-        </button>
+        <div class="d-flex gap-2 align-items-center">
+            {% if analysis_running_strength %}
+            <button disabled style="background:#f3f4f6; color:#9ca3af; border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600; cursor:not-allowed;">
+                <span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;border-width:2px;"></span>분석 중...
+            </button>
+            {% else %}
+            <button id="strengthTriggerBtn" onclick="triggerStrengthAnalysis()" style="background:#16a34a; color:white; border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">
+                <i class="bi bi-arrow-repeat me-1"></i>AI 분석 실행
+            </button>
+            {% endif %}
+            <button onclick="openStrengthDrawer()" style="background:#f9fafb; color:#6b7280; border:1px solid #e5e7eb; border-radius:16px; padding:5px 14px; font-size:12px; font-weight:600; cursor:pointer;">
+                확인된 강점
+                <span id="strengthBadge" style="display:none; background:#22c55e; color:white; border-radius:10px; padding:0 6px; margin-left:4px; font-size:11px;"></span>
+            </button>
+        </div>
     </div>
 
     {% if ai_strength_items %}
@@ -112,23 +123,6 @@
         </button>
     </div>
 
-    {% elif strength_items %}
-    <!-- 폴백: 규칙 기반 (AI 분석 전) -->
-    <div style="background:#f0fdf4; border-radius:10px; padding:10px 14px; margin-bottom:12px; border:1px solid #bbf7d0; font-size:12px; color:#166534;">
-        <i class="bi bi-info-circle me-1"></i>AI 분석 전 규칙 기반 강점을 표시합니다. AI 분석을 실행하면 더 정확한 강점 인사이트를 확인할 수 있습니다.
-    </div>
-    {% for item in strength_items %}
-    <div style="background:white; border-radius:12px; padding:14px; margin-bottom:10px;
-         border-left:4px solid #22c55e;
-         box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
-        <div class="d-flex align-items-center gap-2 mb-1">
-            <i class="bi bi-{{ item.icon }}" style="font-size:16px; color:#16a34a;"></i>
-            <span style="font-size:14px; font-weight:700; color:#222;">{{ item.title }}</span>
-        </div>
-        <p style="font-size:13px; color:#555; margin-bottom:0; line-height:1.5;">{{ item.desc }}</p>
-    </div>
-    {% endfor %}
-
     {% else %}
     <!-- 빈 상태 -->
     <div style="text-align:center; color:#aaa; font-size:14px; padding:24px 0;">
@@ -151,12 +145,12 @@
             <span style="background:#ff4757; color:white; border-radius:20px; padding:1px 8px; font-size:11px; margin-left:5px; font-weight:700;">{{ ai_action_items|length }}</span>
             {% endif %}
         </div>
-        {% if analysis_running %}
+        {% if analysis_running_action %}
         <button disabled style="background:#f3f4f6; color:#9ca3af; border:none; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:600; cursor:not-allowed;">
             <span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;border-width:2px;"></span>분석 중...
         </button>
         {% else %}
-        <button id="triggerBtn" onclick="triggerAnalysis()" style="background:#ff4757; color:white; border:none; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">
+        <button id="triggerBtn" onclick="triggerActionAnalysis()" style="background:#ff4757; color:white; border:none; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">
             <i class="bi bi-arrow-repeat me-1"></i>AI 분석 실행
         </button>
         {% endif %}
@@ -282,7 +276,7 @@
 <!-- 처리 내역 드로어 -->
 <style>
 #historyOverlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1021;
     opacity: 0; pointer-events: none;
     transition: opacity 0.25s ease;
 }
@@ -293,7 +287,7 @@
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
     width: 100%; max-width: 430px;
     background: white; border-radius: 20px 20px 0 0;
-    z-index: 1001;
+    z-index: 1022;
     height: 70vh;
     display: flex; flex-direction: column;
     transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
@@ -393,7 +387,7 @@
 <!-- 확인된 강점 드로어 -->
 <style>
 #strengthOverlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1021;
     opacity: 0; pointer-events: none;
     transition: opacity 0.25s ease;
 }
@@ -404,7 +398,7 @@
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
     width: 100%; max-width: 430px;
     background: white; border-radius: 20px 20px 0 0;
-    z-index: 1001;
+    z-index: 1022;
     height: 70vh;
     display: flex; flex-direction: column;
     transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
@@ -491,18 +485,22 @@
                     <th style="padding:9px 8px; text-align:center; color:#555;">평점</th>
                     <th style="padding:9px 8px; text-align:center; color:#555;">리뷰</th>
                     <th style="padding:9px 8px; text-align:center; color:#22c55e;">긍정</th>
+                    <th style="padding:9px 8px; text-align:center; color:#f59e0b;">중립</th>
                     <th style="padding:9px 8px; text-align:center; color:#ef4444;">부정</th>
                     <th style="padding:9px 8px; text-align:center; color:#555;">변화</th>
+                    <th style="padding:9px 8px; text-align:center; color:#555;"></th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in weekly_data %}
                 {% with summary=item.summary %}
-                <tr style="border-bottom:1px solid #f0f0f0; {% if forloop.first %}background:#fff9f9;{% endif %}">
+                <tr style="border-bottom:1px solid #f0f0f0; {% if forloop.first %}background:#fafafa;{% endif %}"
+                    onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background='{% if forloop.first %}#fafafa{% else %}white{% endif %}'">
                     <td style="padding:9px 8px; text-align:center; font-weight:700; color:#ff4757;">W{{ summary.week_number }}</td>
                     <td style="padding:9px 8px; text-align:center; font-weight:700; color:#222;">{{ summary.average }}</td>
                     <td style="padding:9px 8px; text-align:center; color:#555;">{{ summary.count }}</td>
                     <td style="padding:9px 8px; text-align:center; color:#22c55e; font-weight:600;">{{ summary.positive_count }}</td>
+                    <td style="padding:9px 8px; text-align:center; color:#f59e0b; font-weight:600;">{{ summary.neutral_count }}</td>
                     <td style="padding:9px 8px; text-align:center; color:#ef4444; font-weight:600;">{{ summary.negative_count }}</td>
                     <td style="padding:9px 8px; text-align:center;">
                         {% if item.has_diff %}
@@ -517,6 +515,12 @@
                         <span style="color:#ddd;">-</span>
                         {% endif %}
                     </td>
+                    <td style="padding:9px 8px; text-align:center;">
+                        <button onclick="openWeekReviews({{ summary.year }}, {{ summary.week_number }})"
+                            style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:14px; padding:3px 10px; font-size:11px; font-weight:600; cursor:pointer;">
+                            리뷰 보기
+                        </button>
+                    </td>
                 </tr>
                 {% endwith %}
                 {% endfor %}
@@ -526,112 +530,57 @@
 </div>
 {% endif %}
 
-<!-- 긍정 리뷰 반복 키워드 -->
-{% if pos_keywords %}
-<div style="padding: 16px; background: white; border-top: 1px solid #eee;">
-    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:10px;">
-        <i class="bi bi-hand-thumbs-up-fill me-1" style="color:#16a34a;"></i>긍정 리뷰 반복 키워드
-        <span style="font-size:11px; font-weight:400; color:#aaa; margin-left:4px;">고객이 칭찬하는 항목</span>
+<!-- 주차별 리뷰 모달 -->
+<style>
+#weekReviewOverlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+#weekReviewOverlay.open {
+    opacity: 1; pointer-events: auto;
+}
+#weekReviewDrawer {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 480px;
+    background: white; border-radius: 20px 20px 0 0;
+    z-index: 9999;
+    max-height: 85vh;
+    display: flex; flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+}
+#weekReviewDrawer.open {
+    transform: translateX(-50%) translateY(0);
+}
+.week-tab {
+    flex: 1; padding: 10px 0; font-size: 13px; font-weight: 600;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: #9ca3af; cursor: pointer; transition: all 0.15s;
+}
+.week-tab.active {
+    color: #222; border-bottom-color: #222;
+}
+</style>
+<div id="weekReviewOverlay" onclick="closeWeekReviews()"></div>
+<div id="weekReviewDrawer">
+    <div style="text-align:center; padding:10px 0 0;">
+        <div style="width:36px; height:4px; background:#e5e7eb; border-radius:2px; display:inline-block;"></div>
     </div>
-    <div>
-        {% for kw in pos_keywords %}
-        <span style="display:inline-block; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:20px; padding:5px 13px; font-size:12px; font-weight:600; margin:3px 2px;">
-            {{ kw.keyword }} <span style="opacity:0.65;">({{ kw.count }})</span>
-        </span>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- 부정 리뷰 반복 키워드 -->
-{% if neg_keywords %}
-<div style="padding: 16px; background: white; border-top: 1px solid #eee;">
-    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:10px;">
-        <i class="bi bi-exclamation-circle me-1" style="color:#ef4444;"></i>부정 리뷰 반복 키워드
-        <span style="font-size:11px; font-weight:400; color:#aaa; margin-left:4px;">집중 개선 필요</span>
-    </div>
-    <div>
-        {% for kw in neg_keywords %}
-        <span style="display:inline-block; background:#fff0f0; color:#ef4444; border:1px solid #fecaca; border-radius:20px; padding:5px 13px; font-size:12px; font-weight:600; margin:3px 2px;">
-            {{ kw.keyword }} <span style="opacity:0.65;">({{ kw.count }})</span>
-        </span>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- 최근 긍정 리뷰 목록 -->
-<div id="posSection" style="padding: 16px; background: #f0fdf4; border-top: 1px solid #eee;">
-    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:12px;">
-        <i class="bi bi-hand-thumbs-up me-1" style="color:#16a34a;"></i>최근 긍정 리뷰
-    </div>
-    {% for review in recent_positive_reviews %}
-    <div style="background:white; border-radius:10px; padding:12px; margin-bottom:8px; border-left:3px solid #22c55e; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-            <div style="color:#16a34a;">
-                {% for i in "12345" %}
-                    {% if forloop.counter <= review.rating %}
-                    <i class="bi bi-star-fill" style="font-size:11px;"></i>
-                    {% else %}
-                    <i class="bi bi-star" style="font-size:11px;"></i>
-                    {% endif %}
-                {% endfor %}
-                <span style="font-size:12px; font-weight:700; margin-left:4px;">{{ review.rating }}점</span>
-            </div>
-            <small style="color:#bbb; font-size:11px;">{{ review.review_date }} · {{ review.week }}주차</small>
-        </div>
-        <p style="font-size:13px; color:#444; margin-bottom:6px; line-height:1.5;">{{ review.content }}</p>
-        {% if review.keywords %}
+    <div style="padding:12px 16px 10px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
         <div>
-            {% for kw in review.keywords %}
-            <span style="display:inline-block; background:#f0fdf4; color:#16a34a; border-radius:12px; padding:2px 8px; font-size:11px; margin:1px;">{{ kw }}</span>
-            {% endfor %}
+            <div id="weekModalTitle" style="font-size:15px; font-weight:700; color:#222;"></div>
+            <div id="weekModalSummary" style="font-size:11px; color:#888; margin-top:2px;"></div>
         </div>
-        {% endif %}
+        <button onclick="closeWeekReviews()" style="background:none; border:none; font-size:22px; color:#9ca3af; cursor:pointer; padding:0 4px; line-height:1;">×</button>
     </div>
-    {% empty %}
-    <div style="text-align:center; color:#aaa; font-size:14px; padding:32px 0;">
-        <i class="bi bi-emoji-neutral d-block mb-2" style="font-size:30px; color:#9ca3af;"></i>
-        아직 긍정 리뷰 데이터가 없습니다.
+    <div id="weekReviewTabs" style="display:flex; border-bottom:1px solid #f0f0f0; flex-shrink:0; padding:0 4px;">
+        <button class="week-tab active" data-tab="all" onclick="filterWeekReviews('all')">전체</button>
+        <button class="week-tab" data-tab="positive" onclick="filterWeekReviews('positive')">긍정</button>
+        <button class="week-tab" data-tab="neutral" onclick="filterWeekReviews('neutral')">중립</button>
+        <button class="week-tab" data-tab="negative" onclick="filterWeekReviews('negative')">부정</button>
     </div>
-    {% endfor %}
-</div>
-
-<!-- 최근 부정 리뷰 목록 -->
-<div id="negSection" style="padding: 16px; background: #f8f9fa; border-top: 1px solid #eee; padding-bottom: 80px;">
-    <div style="font-size:13px; font-weight:700; color:#222; margin-bottom:12px;">
-        <i class="bi bi-hand-thumbs-down me-1" style="color:#ef4444;"></i>최근 부정 리뷰
-    </div>
-    {% for review in recent_negative_reviews %}
-    <div style="background:white; border-radius:10px; padding:12px; margin-bottom:8px; border-left:3px solid #ef4444; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-            <div style="color:#ef4444;">
-                {% for i in "12345" %}
-                    {% if forloop.counter <= review.rating %}
-                    <i class="bi bi-star-fill" style="font-size:11px;"></i>
-                    {% else %}
-                    <i class="bi bi-star" style="font-size:11px;"></i>
-                    {% endif %}
-                {% endfor %}
-                <span style="font-size:12px; font-weight:700; margin-left:4px;">{{ review.rating }}점</span>
-            </div>
-            <small style="color:#bbb; font-size:11px;">{{ review.review_date }} · {{ review.week }}주차</small>
-        </div>
-        <p style="font-size:13px; color:#444; margin-bottom:6px; line-height:1.5;">{{ review.content }}</p>
-        {% if review.keywords %}
-        <div>
-            {% for kw in review.keywords %}
-            <span style="display:inline-block; background:#fff0f0; color:#ef4444; border-radius:12px; padding:2px 8px; font-size:11px; margin:1px;">{{ kw }}</span>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-    {% empty %}
-    <div style="text-align:center; color:#aaa; font-size:14px; padding:32px 0;">
-        <i class="bi bi-emoji-smile d-block mb-2" style="font-size:30px; color:#22c55e;"></i>
-        최근 부정 리뷰가 없습니다 🎉
-    </div>
-    {% endfor %}
+    <div id="weekReviewList" style="overflow-y:auto; flex:1; padding:12px;"></div>
 </div>
 
 {% endblock %}
@@ -659,40 +608,73 @@ function showToast(message, type) {
 }
 
 // ── 수동 분석 트리거 ───────────────────────────────────────
-function triggerAnalysis() {
-    const btn = document.getElementById('triggerBtn');
+function _triggerAnalysis(itemType, btnId, btnColor) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;border-width:2px;"></span>분석 요청 중...';
 
     fetch('/stores/{{ store.pk }}/owner/trigger-analysis/', {
         method: 'POST',
-        headers: { 'X-CSRFToken': getCsrf() },
+        headers: { 'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: itemType }),
     })
     .then(r => r.json())
     .then(data => {
         if (data.ok) {
             if (data.sync) {
-                // 동기 실행 완료 → 즉시 새로고침
-                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>분석 완료! 새로고침 중...';
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>분석 완료!';
                 btn.style.background = '#16a34a';
-                showToast('AI 분석이 완료되었습니다. 페이지를 새로고침합니다.', 'success');
+                showToast('AI 분석이 완료되었습니다. 새로고침합니다.', 'success');
                 setTimeout(() => location.reload(), 1200);
             } else {
-                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>요청 완료';
-                btn.style.background = '#16a34a';
-                showToast('AI 분석이 시작되었습니다. 완료 후 새로고침하면 결과가 나타납니다.', 'success');
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:12px;height:12px;border-width:2px;"></span>분석 중...';
+                btn.style.background = '#6b7280';
+                showToast('AI 분석이 시작되었습니다. 완료 후 자동으로 새로고침됩니다.', 'success');
+                _pollUntilDone(itemType, btnId, btnColor);
             }
         } else {
             btn.disabled = false;
+            btn.style.background = btnColor;
             btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>AI 분석 실행';
             showToast(data.error || '오류가 발생했습니다.', 'error');
         }
     })
     .catch(() => {
         btn.disabled = false;
+        btn.style.background = btnColor;
         btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>AI 분석 실행';
         showToast('네트워크 오류가 발생했습니다.', 'error');
     });
+}
+
+function _pollUntilDone(itemType, btnId, btnColor) {
+    const statusKey = itemType === 'strength' ? 'strength_running' : 'action_running';
+    const intervalId = setInterval(() => {
+        fetch('/stores/{{ store.pk }}/owner/analysis-status/')
+        .then(r => r.json())
+        .then(data => {
+            if (!data[statusKey]) {
+                clearInterval(intervalId);
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>분석 완료!';
+                    btn.style.background = '#16a34a';
+                }
+                showToast('AI 분석이 완료되었습니다. 새로고침합니다.', 'success');
+                setTimeout(() => location.reload(), 1000);
+            }
+        })
+        .catch(() => clearInterval(intervalId));
+    }, 3000);
+}
+
+function triggerActionAnalysis() {
+    _triggerAnalysis('action', 'triggerBtn', '#ff4757');
+}
+
+function triggerStrengthAnalysis() {
+    _triggerAnalysis('strength', 'strengthTriggerBtn', '#16a34a');
 }
 
 // ── 액션 아이템 상태 변경 ──────────────────────────────────
@@ -1153,5 +1135,84 @@ function updateHistoryTabCounts() {
         }
     });
 })();
+
+// ── 주차별 리뷰 모달 ──────────────────────────────────────
+const STORE_ID = {{ store.pk }};
+
+let _weekAllReviews = [];
+
+const _sentimentStyle = {
+    positive: { label: '긍정', bg: '#f0fdf4', color: '#16a34a' },
+    neutral:  { label: '중립', bg: '#fefce8', color: '#ca8a04' },
+    negative: { label: '부정', bg: '#fff1f2', color: '#ef4444' },
+};
+
+function renderWeekReviewList(tab) {
+    const list = document.getElementById('weekReviewList');
+    const filtered = tab === 'all' ? _weekAllReviews : _weekAllReviews.filter(r => r.sentiment === tab);
+    if (!filtered.length) {
+        list.innerHTML = '<div style="text-align:center;padding:32px;color:#aaa;">해당 리뷰가 없습니다.</div>';
+        return;
+    }
+    list.innerHTML = filtered.map(r => {
+        const st = _sentimentStyle[r.sentiment] || _sentimentStyle.neutral;
+        const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+        return `<div style="border:1px solid #f0f0f0; border-radius:10px; padding:12px 14px; margin-bottom:10px; background:${st.bg};">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="color:#f59e0b; font-size:13px; letter-spacing:1px;">${stars}</span>
+                <span style="display:flex; gap:6px; align-items:center;">
+                    <span style="font-size:11px; color:${st.color}; background:white; border:1px solid ${st.color}; border-radius:20px; padding:2px 8px; font-weight:600;">${st.label}</span>
+                    <span style="font-size:11px; color:#aaa;">${r.review_date}</span>
+                </span>
+            </div>
+            <div style="font-size:13px; color:#333; line-height:1.6;">${r.content}</div>
+        </div>`;
+    }).join('');
+}
+
+function filterWeekReviews(tab) {
+    document.querySelectorAll('.week-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    renderWeekReviewList(tab);
+}
+
+function openWeekReviews(year, week) {
+    const overlay = document.getElementById('weekReviewOverlay');
+    const drawer = document.getElementById('weekReviewDrawer');
+    const list = document.getElementById('weekReviewList');
+    _weekAllReviews = [];
+    document.getElementById('weekModalTitle').textContent = `${year}년 W${String(week).padStart(2,'0')} 리뷰`;
+    document.getElementById('weekModalSummary').textContent = '불러오는 중...';
+    list.innerHTML = '<div style="text-align:center;padding:32px;color:#aaa;">로딩 중...</div>';
+    // 탭 초기화
+    document.querySelectorAll('.week-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'all'));
+    overlay.classList.add('open');
+    drawer.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    fetch(`/stores/${STORE_ID}/owner/week/${year}/${week}/reviews/`)
+        .then(r => r.json())
+        .then(data => {
+            const s = data.summary;
+            if (s) {
+                document.getElementById('weekModalSummary').textContent =
+                    `평점 ${s.average} · 총 ${s.count}건 · 긍정 ${s.positive_count} / 중립 ${s.neutral_count} / 부정 ${s.negative_count}`;
+            } else {
+                document.getElementById('weekModalSummary').textContent = '';
+            }
+            _weekAllReviews = data.reviews || [];
+            renderWeekReviewList('all');
+        })
+        .catch(() => {
+            list.innerHTML = '<div style="text-align:center;padding:32px;color:#ef4444;">불러오기 실패</div>';
+        });
+}
+
+function closeWeekReviews() {
+    document.getElementById('weekReviewOverlay').classList.remove('open');
+    document.getElementById('weekReviewDrawer').classList.remove('open');
+    document.body.style.overflow = '';
+}
 </script>
 {% endblock %}

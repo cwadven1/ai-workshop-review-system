@@ -177,6 +177,7 @@ class AIAnalysisJob(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="ai_jobs", verbose_name="가게")
     status = models.CharField("상태", max_length=20, choices=STATUS_CHOICES, default="pending")
     triggered_by = models.CharField("트리거", max_length=20, choices=TRIGGER_CHOICES, default="schedule")
+    job_type = models.CharField("분석 유형", max_length=20, default="all")
     source_week = models.ForeignKey(
         "ShopWeekReview", on_delete=models.SET_NULL, null=True, blank=True,
         verbose_name="기준 주차", related_name="ai_jobs"

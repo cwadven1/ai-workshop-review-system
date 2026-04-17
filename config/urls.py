@@ -33,8 +33,18 @@ urlpatterns = [
         name="trigger-analysis",
     ),
     path(
+        "stores/<int:store_id>/owner/analysis-status/",
+        store_views.analysis_status,
+        name="analysis-status",
+    ),
+    path(
         "action-items/<int:item_id>/update/",
         store_views.update_action_item,
         name="update-action-item",
+    ),
+    path(
+        "stores/<int:store_id>/owner/week/<int:year>/<int:week>/reviews/",
+        store_views.owner_week_reviews,
+        name="owner-week-reviews",
     ),
 ]
